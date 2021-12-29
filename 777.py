@@ -23,6 +23,15 @@ def load_screen_im(name, colorkey=None):
     return image
 
 
+def music_play(name):
+    fullname = os.path.join('data', name)
+    if not os.path.isfile(fullname):
+        print(f"Звуковой файл '{fullname}' не найден")
+        sys.exit()
+    pygame.mixer.music.load(fullname)
+    pygame.mixer.music.play()
+
+
 def terminate():
     pygame.quit()
     sys.exit()
@@ -35,12 +44,13 @@ class App:
         pygame.display.set_caption('Alto')
         self.fps = 200
         self.clock = pygame.time.Clock()
-        self.start_game()
+        self.length = 0
 
     def game(self):
         dog_surf = load_screen_im('pause.png')
         dog_rect = dog_surf.get_rect(bottomright=(60, 690))
         picture = Picture()
+        pause = False
         run = True
         while run:
             for event in pygame.event.get():
@@ -50,11 +60,40 @@ class App:
                     x, y = event.pos
                     if (x in range(10, 60)) and (y in range(640, 690)):
                         print('Пауза')
+                        if not pause:
+                            pause = True
+                            dog_surf = load_screen_im('play.png', -1)
+                            rect = pygame.Rect(0, 60, 700, 640)
+                            sub = self.screen.subsurface(rect)
+                            pygame.image.save(sub, 'data/screenshot.jpg')
+                            pause_screen = load_screen_im('screenshot.jpg')
+                            pause_rect = pause_screen.get_rect(topleft=(0, 60))
+                            self.screen.blit(pause_screen, pause_rect)
+                        else:
+                            pause = False
+                            dog_surf = load_screen_im('pause.png', -1)
 
             self.screen.fill(pygame.Color('blue'))
+            music_play('music.mp3')
+            if not pause:
+                self.length += 0.06
+                font = pygame.font.Font(None, 50)
+                string_rendered = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
+                intro_rect = string_rendered.get_rect()
+                intro_rect.top = 10
+                intro_rect.x = 675 - 24 * len(str(int(self.length)))
+                self.screen.blit(string_rendered, intro_rect)
+            else:
+                font = pygame.font.Font(None, 120)
+                string_rendered = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
+                intro_rect = string_rendered.get_rect()
+                intro_rect.top = 250
+                intro_rect.x = (700 - 60 * len(str(int(self.length)))) // 2
+                self.screen.blit(string_rendered, intro_rect)
             self.screen.blit(picture.image, picture.rect)
             self.screen.blit(picture.image2, picture.rect2)
-            picture.update()
+
+            picture.update(pause)
             self.screen.blit(dog_surf, dog_rect)
             pygame.display.flip()
             self.clock.tick(self.fps)
@@ -94,7 +133,7 @@ class App:
                         self.game()
                     if (x in range(10, 180)) and (y in range(180, 195)):
                         print('Достижения')
-
+            music_play('music.mp3')
             pygame.display.flip()
             self.clock.tick(self.fps)
 
@@ -117,28 +156,27 @@ class Picture():
 
         self.first_im = True
         self.second_im = False
+        self.pause = False
 
-    def update(self):
-        if self.first_im:
-            self.rect = self.rect.move(-1, 0)
-        if self.second_im:
-            self.rect2 = self.rect2.move(-1, 0)
+    def update(self, pause):
+        if not pause:
+            if self.first_im:
+                self.rect = self.rect.move(-1, 0)
+            if self.second_im:
+                self.rect2 = self.rect2.move(-1, 0)
 
-        if self.rect.left == -300 and self.first_im:
-            self.second_im = True
-            self.rect2.left = 700
-            self.rect2.top = 400
-        if self.rect.left == -1000 and self.first_im:
-            self.first_im = False
-        if self.rect2.left == -300 and self.second_im:
-            self.rect.left = 700
-            self.rect.top = 400
-            self.first_im = True
-        if self.rect2.left == -1000 and self.second_im:
-            self.second_im = False
-
-
-
+            if self.rect.left == -300 and self.first_im:
+                self.second_im = True
+                self.rect2.left = 700
+                self.rect2.top = 400
+            if self.rect.left == -1000 and self.first_im:
+                self.first_im = False
+            if self.rect2.left == -300 and self.second_im:
+                self.rect.left = 700
+                self.rect.top = 400
+                self.first_im = True
+            if self.rect2.left == -1000 and self.second_im:
+                self.second_im = False
 
 
 class Player:
@@ -158,3 +196,4 @@ class Camera:
 
 if __name__ == '__main__':
     app = App()
+    app.start_game()
