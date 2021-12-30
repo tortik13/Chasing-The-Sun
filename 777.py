@@ -76,6 +76,7 @@ class App:
                             dog_surf = load_screen_im('pause.png', -1)
 
             self.screen.fill('#99CCFF')
+            music_play('music.mp3')
             self.all_sprites.draw(self.screen)
 
             if not pause:
@@ -232,4 +233,3 @@ class Camera:
 if __name__ == '__main__':
     app = App()
     app.start_game()
-    music_play('music.mp3')
