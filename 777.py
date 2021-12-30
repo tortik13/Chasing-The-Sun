@@ -32,19 +32,20 @@ def music_play(name):
     pygame.mixer.music.play()
 
 
-def terminate():
-    pygame.quit()
-    sys.exit()
-
-
 class App:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption('Alto')
+        pygame.display.set_caption('DESERT Adventure')
+        self.all_sprites = pygame.sprite.Group()
+        self.dragon = AnimatedSprite(self, load_screen_im("birds2.png"), 3, 3, 115, 121)
         self.fps = 200
         self.clock = pygame.time.Clock()
         self.length = 0
+
+    def terminate(self):
+        pygame.quit()
+        sys.exit()
 
     def game(self):
         dog_surf = load_screen_im('pause.png')
@@ -55,7 +56,7 @@ class App:
         while run:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    terminate()
+                    self.terminate()
                 if event.type == pygame.MOUSEBUTTONUP:
                     x, y = event.pos
                     if (x in range(10, 60)) and (y in range(640, 690)):
@@ -69,14 +70,19 @@ class App:
                             pause_screen = load_screen_im('screenshot.jpg')
                             pause_rect = pause_screen.get_rect(topleft=(0, 60))
                             self.screen.blit(pause_screen, pause_rect)
+
                         else:
                             pause = False
                             dog_surf = load_screen_im('pause.png', -1)
 
-            self.screen.fill(pygame.Color('blue'))
-            music_play('music.mp3')
+            self.screen.fill('#99CCFF')
+            self.all_sprites.draw(self.screen)
+
             if not pause:
                 self.length += 0.06
+
+                self.all_sprites.update()
+
                 font = pygame.font.Font(None, 50)
                 string_rendered = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
                 intro_rect = string_rendered.get_rect()
@@ -85,11 +91,13 @@ class App:
                 self.screen.blit(string_rendered, intro_rect)
             else:
                 font = pygame.font.Font(None, 120)
+
                 string_rendered = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
                 intro_rect = string_rendered.get_rect()
                 intro_rect.top = 250
                 intro_rect.x = (700 - 60 * len(str(int(self.length)))) // 2
                 self.screen.blit(string_rendered, intro_rect)
+
             self.screen.blit(picture.image, picture.rect)
             self.screen.blit(picture.image2, picture.rect2)
 
@@ -122,7 +130,7 @@ class App:
         while run:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    terminate()
+                    self.terminate()
                 if event.type == pygame.MOUSEBUTTONUP:
                     x, y = event.pos
                     if (x in range(10, 120)) and (y in range(60, 75)):
@@ -133,7 +141,7 @@ class App:
                         self.game()
                     if (x in range(10, 180)) and (y in range(180, 195)):
                         print('Достижения')
-            music_play('music.mp3')
+
             pygame.display.flip()
             self.clock.tick(self.fps)
 
@@ -184,6 +192,33 @@ class Player:
         pass
 
 
+class AnimatedSprite(pygame.sprite.Sprite):
+    def __init__(self, app, sheet, columns, rows, x, y):
+        super().__init__(app.all_sprites)
+        self.frames = []
+        self.cut_sheet(sheet, columns, rows)
+        self.cur_frame = 0
+        self.image = self.frames[self.cur_frame]
+        self.rect = self.rect.move(x, y)
+        self.counter = 0
+
+    def cut_sheet(self, sheet, columns, rows):
+        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (self.rect.w * i, self.rect.h * j)
+                self.frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, self.rect.size)))
+
+    def update(self):
+        self.counter += 1
+        if self.counter == 8:
+            self.counter = 0
+            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+            self.image = self.frames[self.cur_frame]
+
+
 class Music:
     def __init__(self):
         pass
@@ -197,3 +232,4 @@ class Camera:
 if __name__ == '__main__':
     app = App()
     app.start_game()
+    music_play('music.mp3')
