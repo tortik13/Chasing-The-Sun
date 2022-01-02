@@ -1,4 +1,5 @@
 import os
+import sqlite3
 import sys
 import pygame
 import random
@@ -39,10 +40,11 @@ class App:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption('DESERT Adventure')
         self.all_sprites = pygame.sprite.Group()
-        self.dragon = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 700, 260)
-        self.fps = 200
+        self.bird = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 700, 260)
+        self.fps = 200.0
         self.clock = pygame.time.Clock()
         self.length = 0
+        self.score = 0
         self.mus = music_play('music.mp3')
 
     def terminate(self):
@@ -86,6 +88,8 @@ class App:
             if not pause:
                 self.length += 0.06
 
+                self.fps += 0.5
+
                 self.all_sprites.update()
 
                 font = pygame.font.Font(None, 50)
@@ -94,6 +98,7 @@ class App:
                 intro_rect.top = 10
                 intro_rect.x = 675 - 24 * len(str(int(self.length)))
                 self.screen.blit(string_rendered, intro_rect)
+
             else:
                 font = pygame.font.Font(None, 120)
 
@@ -103,20 +108,27 @@ class App:
                 intro_rect.x = (700 - 60 * len(str(int(self.length)))) // 2
                 self.screen.blit(string_rendered, intro_rect)
 
+            font = pygame.font.Font(None, 50)
+            string_rendered = font.render(str(int(self.score)), True, pygame.Color('white'))
+            intro_rect = string_rendered.get_rect()
+            intro_rect.top = 50
+            intro_rect.x = 700 - 28 * len(str(int(self.score)))
+            self.screen.blit(string_rendered, intro_rect)
+
             self.screen.blit(picture.image, picture.rect)
             self.screen.blit(picture.image2, picture.rect2)
             self.screen.blit(weather.clouds_1, weather.rect)
             self.screen.blit(weather.clouds_2, weather.rect2)
             self.screen.blit(weather.clouds_3, weather.rect3)
 
-            if int(self.length) % 50 == 0:
-                self.dragon.new_bird()
+            if int(self.length) % 120 == 0 and int(self.length) > 2:
+                self.bird.new_bird()
 
             picture.update(pause)
             weather.update(pause)
             self.screen.blit(dog_surf, dog_rect)
             pygame.display.flip()
-            self.clock.tick(self.fps)
+            self.clock.tick(int(self.fps))
 
     def start_game(self):
         intro_text = ["ЗАСТАВКА", "",
@@ -155,7 +167,33 @@ class App:
                         print('Достижения')
 
             pygame.display.flip()
-            self.clock.tick(self.fps)
+            self.clock.tick(int(self.fps))
+
+    def update_records(self):
+        con = sqlite3.connect('info.sqlite')
+        cur = con.cursor()
+        length = cur.execute(f"""SELECT num from records
+                                    WHERE type = 'length'""").fetchall()
+        score = cur.execute(f"""SELECT num from records
+                                    WHERE type = 'score'""").fetchall()
+        con.close()
+
+        if self.length > length[0]:
+            con = sqlite3.connect('info.sqlite')
+            cur = con.cursor()
+            data = ('length', int(self.length))
+            query = 'INSERT INTO records VALUES (?, ?)'
+            cur.execute(query, data)
+            con.commit()
+            con.close()
+        if self.score > score[0]:
+            con = sqlite3.connect('info.sqlite')
+            cur = con.cursor()
+            data = ('score', int(self.score))
+            query = 'INSERT INTO records VALUES (?, ?)'
+            cur.execute(query, data)
+            con.commit()
+            con.close()
 
     def finish_game(self):
         pass
@@ -272,7 +310,6 @@ class Weather:
 
     def change_weather(self, new_weather):
         self.weather = new_weather
-
 
 
 class Camera:
