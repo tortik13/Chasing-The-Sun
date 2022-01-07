@@ -1,6 +1,8 @@
 import os
+import sqlite3
 import sys
 import pygame
+import random
 
 
 WIDTH = 700
@@ -38,10 +40,11 @@ class App:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption('DESERT Adventure')
         self.all_sprites = pygame.sprite.Group()
-        self.dragon = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 600, 260)
-        self.fps = 200
+        self.bird = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 700, 260)
+        self.fps = 200.0
         self.clock = pygame.time.Clock()
         self.length = 0
+        self.score = 0
         self.mus = music_play('music.mp3')
 
     def terminate(self):
@@ -55,6 +58,7 @@ class App:
         weather = Weather()
         pause = False
         run = True
+
         while run:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -78,12 +82,13 @@ class App:
                             pause = False
                             dog_surf = load_screen_im('pause.png', -1)
                             pygame.mixer.music.unpause()
-
             self.screen.fill('#99CCFF')
             self.all_sprites.draw(self.screen)
 
             if not pause:
                 self.length += 0.06
+
+                self.fps += 0.5
 
                 self.all_sprites.update()
 
@@ -93,6 +98,7 @@ class App:
                 intro_rect.top = 10
                 intro_rect.x = 675 - 24 * len(str(int(self.length)))
                 self.screen.blit(string_rendered, intro_rect)
+
             else:
                 font = pygame.font.Font(None, 120)
 
@@ -102,16 +108,35 @@ class App:
                 intro_rect.x = (700 - 60 * len(str(int(self.length)))) // 2
                 self.screen.blit(string_rendered, intro_rect)
 
+            font = pygame.font.Font(None, 50)
+            string_rendered = font.render(str(int(self.score)), True, pygame.Color('white'))
+            intro_rect = string_rendered.get_rect()
+            intro_rect.top = 50
+            intro_rect.x = 700 - 28 * len(str(int(self.score)))
+            self.screen.blit(string_rendered, intro_rect)
+
             self.screen.blit(picture.image, picture.rect)
             self.screen.blit(picture.image2, picture.rect2)
-            self.screen.blit(weather.clouds_1, weather.rect)
-            self.screen.blit(weather.clouds_2, weather.rect2)
+
+            if weather.clouds:
+                self.screen.blit(weather.clouds_1, weather.rect)
+                self.screen.blit(weather.clouds_2, weather.rect2)
+                self.screen.blit(weather.clouds_3, weather.rect3)
+            if weather.sun:
+                self.screen.blit(weather.sun_1, weather.rect4)
+
+            if int(self.length) % 119 == 0 and int(self.length) > 0:
+                new_weather = random.choice(['clouds', 'sun'])
+
+            if int(self.length) % 120 == 0 and int(self.length) > 2:
+                self.bird.new_bird()
+                weather.change_weather(new_weather)
 
             picture.update(pause)
             weather.update(pause)
             self.screen.blit(dog_surf, dog_rect)
             pygame.display.flip()
-            self.clock.tick(self.fps)
+            self.clock.tick(int(self.fps))
 
     def start_game(self):
         intro_text = ["ЗАСТАВКА", "",
@@ -150,7 +175,33 @@ class App:
                         print('Достижения')
 
             pygame.display.flip()
-            self.clock.tick(self.fps)
+            self.clock.tick(int(self.fps))
+
+    def update_records(self):
+        con = sqlite3.connect('info.sqlite')
+        cur = con.cursor()
+        length = cur.execute(f"""SELECT num from records
+                                    WHERE type = 'length'""").fetchall()
+        score = cur.execute(f"""SELECT num from records
+                                    WHERE type = 'score'""").fetchall()
+        con.close()
+
+        if self.length > length[0]:
+            con = sqlite3.connect('info.sqlite')
+            cur = con.cursor()
+            data = ('length', int(self.length))
+            query = 'INSERT INTO records VALUES (?, ?)'
+            cur.execute(query, data)
+            con.commit()
+            con.close()
+        if self.score > score[0]:
+            con = sqlite3.connect('info.sqlite')
+            cur = con.cursor()
+            data = ('score', int(self.score))
+            query = 'INSERT INTO records VALUES (?, ?)'
+            cur.execute(query, data)
+            con.commit()
+            con.close()
 
     def finish_game(self):
         pass
@@ -158,16 +209,17 @@ class App:
 
 class Picture:
     def __init__(self):
-
         self.image = pygame.image.load('data/test.png')
         self.rect = self.image.get_rect()
         self.rect.left = 0
         self.rect.top = 400
+        # self.mask = pygame.mask.from_surface(self.image)
 
         self.image2 = pygame.image.load('data/test3.png')
         self.rect2 = self.image2.get_rect()
         self.rect2.left = 700
         self.rect2.top = 400
+        # self.mask2 = pygame.mask.from_surface(self.image2)
 
         self.first_im = True
         self.second_im = False
@@ -224,32 +276,85 @@ class AnimatedSprite(pygame.sprite.Sprite):
         if self.counter_of_fly % 2 == 0:
             self.rect = self.rect.move(-3, 0)
 
-
-class Music:
-    def __init__(self):
-        pass
+    def new_bird(self):
+        self.rect.top = 260
+        self.rect.left = 700
 
 
 class Weather:
     def __init__(self):
         self.clouds_1 = load_screen_im('cloud.png')
         self.clouds_2 = load_screen_im('cloud2.png')
+        self.clouds_3 = load_screen_im('cloud3.png')
         self.rect = self.clouds_1.get_rect()
-        self.rect.left, self.rect.top = 600, 0
+        self.rect.left, self.rect.top = 400, 0
         self.rect2 = self.clouds_1.get_rect()
-        self.rect2.left, self.rect2.top = 700, 0
+        self.rect2.left, self.rect2.top = 700, -50
+        self.rect3 = self.clouds_1.get_rect()
+        self.rect3.left, self.rect3.top = 300, 50
+
+        self.sun_1 = load_screen_im('sun.png')
+        self.rect4 = self.sun_1.get_rect()
+        self.rect4.left, self.rect4.top = 600, 100
+
+        self.weather = 'sun'
+        self.clouds = False
+        self.sun = True
+        self.catch_clouds = False
+        self.catch_sun = False
+
         self.counter = 0
 
     def update(self, pause):
         self.counter += 1
-        if not pause and self.counter % 5 == 0:
-            self.rect = self.rect.move(-1, 0)
-            self.rect2 = self.rect2.move(-1, 0)
+        if not pause and self.counter % 3 == 0:
+            if self.catch_clouds:
+                if self.rect.left > -300:
+                    self.rect = self.rect.move(-3, 0)
+                if self.rect2.left > -300:
+                    self.rect2 = self.rect2.move(-4, 0)
+                if self.rect3.left > -300:
+                    self.rect3 = self.rect3.move(-5, 0)
+                if self.rect.left <= -300 and self.rect2.left <= -300 and self.rect3.left <= -300:
+                    self.catch_clouds = False
+                    self.clouds = False
 
+            if self.catch_sun:
+                if self.rect4.left > -300:
+                    self.rect4 = self.rect4.move(-2, 0)
+                if self.rect4.left <= -300:
+                    self.catch_sun = False
+                    self.sun = False
 
-class Camera:
-    def __init__(self):
-        pass
+            if self.clouds and not self.catch_clouds:
+                self.rect = self.rect.move(-2, 0)
+                if self.rect.left <= -300:
+                    self.rect.left = 700
+                self.rect2 = self.rect2.move(-3, 0)
+                if self.rect2.left <= -300:
+                    self.rect2.left = 700
+                self.rect3 = self.rect3.move(-4, 0)
+                if self.rect3.left <= -300:
+                    self.rect3.left = 700
+            elif self.sun and not self.catch_sun:
+                self.rect4 = self.rect4.move(-1, 0)
+                if self.rect4.left <= -300:
+                    self.rect4.left = 600
+
+    def change_weather(self, weather):
+        if self.weather != weather:
+            if weather == 'sun':
+                self.weather = 'sun'
+                self.rect4.left, self.rect.top = 700, 0
+                self.sun = True
+                self.catch_clouds = True
+            else:
+                self.weather = 'clouds'
+                self.rect.left, self.rect.top = 700, 0
+                self.rect2.left, self.rect2.top = 850, -50
+                self.rect3.left, self.rect3.top = 900, 50
+                self.clouds = True
+                self.catch_sun = True
 
 
 if __name__ == '__main__':
