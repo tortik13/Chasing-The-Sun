@@ -40,6 +40,7 @@ class App:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption('DESERT Adventure')
         self.all_sprites = pygame.sprite.Group()
+        self.player_group = pygame.sprite.Group()
         self.bird = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 700, 260)
         self.fps = 200.0
         self.clock = pygame.time.Clock()
@@ -82,8 +83,11 @@ class App:
                             pause = False
                             dog_surf = load_screen_im('pause.png', -1)
                             pygame.mixer.music.unpause()
+
+            Player(self)
             self.screen.fill('#99CCFF')
             self.all_sprites.draw(self.screen)
+            self.player_group.draw(self.screen)
 
             if not pause:
                 self.length += 0.06
@@ -91,6 +95,7 @@ class App:
                 self.fps += 0.5
 
                 self.all_sprites.update()
+                self.player_group.update(picture)
 
                 font = pygame.font.Font(None, 50)
                 string_rendered = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
@@ -173,6 +178,8 @@ class App:
                         self.game()
                     if (x in range(10, 180)) and (y in range(180, 195)):
                         print('Достижения')
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    self.game()
 
             pygame.display.flip()
             self.clock.tick(int(self.fps))
@@ -207,13 +214,35 @@ class App:
         pass
 
 
+class Player(pygame.sprite.Sprite):
+    def __init__(self, app):
+        super().__init__(app.player_group)
+        self.image = load_screen_im("man.png", -1)
+        app.screen.fill('#99CCFF')
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = 100
+        self.rect.y = 250
+        self.n = 0
+
+    def update(self, picture):
+        if not pygame.sprite.collide_mask(self, picture):
+            self.n -= 1
+            if self.n <= 0:
+                self.rect = self.rect.move(0, 1)
+            elif self.n > 0:
+                self.rect = self.rect.move(0, -1)
+        else:
+            self.n += 1
+
+
 class Picture:
     def __init__(self):
         self.image = pygame.image.load('data/test.png')
         self.rect = self.image.get_rect()
         self.rect.left = 0
         self.rect.top = 400
-        # self.mask = pygame.mask.from_surface(self.image)
+        self.mask = pygame.mask.from_surface(self.image)
 
         self.image2 = pygame.image.load('data/test3.png')
         self.rect2 = self.image2.get_rect()
