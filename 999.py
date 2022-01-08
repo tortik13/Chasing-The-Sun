@@ -217,7 +217,7 @@ class App:
 class Player(pygame.sprite.Sprite):
     def __init__(self, app):
         super().__init__(app.player_group)
-        self.image = load_screen_im("man.png", -1)
+        self.image = load_screen_im("doll.png", -1)
         app.screen.fill('#99CCFF')
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
@@ -228,9 +228,9 @@ class Player(pygame.sprite.Sprite):
     def update(self, picture):
         if not pygame.sprite.collide_mask(self, picture):
             self.n -= 1
-            if self.n <= 0:
+            if self.n < 0:
                 self.rect = self.rect.move(0, 1)
-            elif self.n > 0:
+            elif self.n >= 0:
                 self.rect = self.rect.move(0, -1)
         else:
             self.n += 1
