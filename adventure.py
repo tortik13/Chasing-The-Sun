@@ -5,7 +5,7 @@ import pygame
 import random
 
 
-WIDTH = 700
+WIDTH = 1000
 HEIGHT = 700
 
 
@@ -62,7 +62,7 @@ class App:
         weather = Weather()
         gift = Gift(self)
         player = Player(self)
-        pause = False
+        self.pause = False
         run = True
 
         while run:
@@ -73,9 +73,10 @@ class App:
                     x, y = event.pos
                     if (x in range(10, 60)) and (y in range(640, 690)):
                         print('Пауза')
-                        if not pause:
-                            pause = True
-                            dog_surf = load_screen_im('play.png', -1)
+                        if not self.pause:
+                            self.pause = True
+                            dog_surf = load_screen_im('play.png')
+                            dog_rect = dog_surf.get_rect(bottomright=(60, 690))
                             rect = pygame.Rect(0, 60, 700, 640)
                             sub = self.screen.subsurface(rect)
                             pygame.image.save(sub, 'data/screenshot.jpg')
@@ -85,8 +86,9 @@ class App:
                             pygame.mixer.music.pause()
 
                         else:
-                            pause = False
-                            dog_surf = load_screen_im('pause.png', -1)
+                            self.pause = False
+                            dog_surf = load_screen_im('pause.png')
+                            dog_rect = dog_surf.get_rect(bottomright=(60, 690))
                             pygame.mixer.music.unpause()
 
             self.screen.fill('#99CCFF')
@@ -94,7 +96,7 @@ class App:
             self.player_group.draw(self.screen)
             self.prizes.draw(self.screen)
 
-            if not pause:
+            if not self.pause:
                 self.length += 0.06
 
                 if int(self.length) % 20 == 0 and int(self.length) > 0:
@@ -110,7 +112,7 @@ class App:
                 length = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
                 intro_rect = length.get_rect()
                 intro_rect.top = 10
-                intro_rect.x = 675 - 24 * len(str(int(self.length)))
+                intro_rect.x = 975 - 24 * len(str(int(self.length)))
                 self.screen.blit(length, intro_rect)
 
             else:
@@ -119,14 +121,14 @@ class App:
                 length = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
                 intro_rect = length.get_rect()
                 intro_rect.top = 250
-                intro_rect.x = (700 - 60 * len(str(int(self.length)))) // 2
+                intro_rect.x = (1000 - 60 * len(str(int(self.length)))) // 2
                 self.screen.blit(length, intro_rect)
 
             font = pygame.font.Font(None, 50)
             score = font.render(str(int(self.score)), True, pygame.Color('white'))
             intro_rect = score.get_rect()
             intro_rect.top = 50
-            intro_rect.x = 700 - 28 * len(str(int(self.score)))
+            intro_rect.x = 1000 - 28 * len(str(int(self.score)))
             self.screen.blit(score, intro_rect)
 
             money = font.render(str(int(self.money)), True, pygame.Color('white'))
@@ -152,11 +154,12 @@ class App:
                 self.bird.new_bird()
                 weather.change_weather(new_weather)
 
-            if int(self.length) % 100 == 0 and int(self.length) > 0:
+            if int(self.length) % 130 == 0 and int(self.length) > 0:
                 gift.new_gift()
 
             if gift.prize == 'ускорение':
                 self.speed += 2
+                print(self.speed)
 
             if gift.prize == 'замедление':
                 if self.speed > 3:
@@ -175,8 +178,8 @@ class App:
             if gift.prize == 'монеты':
                 self.money += random.randrange(10, 101, 10)
 
-            picture.update(pause, self.speed)
-            weather.update(pause)
+            picture.update(self.pause, self.speed)
+            weather.update(self.pause)
             self.screen.blit(dog_surf, dog_rect)
             pygame.display.flip()
             self.clock.tick(int(self.fps))
@@ -256,15 +259,21 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, app):
         super().__init__(app.player_group)
         self.image = load_screen_im("doll.png", -1)
-        app.screen.fill('#99CCFF')
-        picture = Picture()
-        self.pic_rect = picture.mask.outline(every=1)
+        self.app = app
+        self.app.screen.fill('#99CCFF')
+        self.picture = Picture()
+        self.pic_rect = self.picture.mask.outline(every=1)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = 100
         self.rect.y = 250
 
-    def update(self, picture):
+    def update(self,  picture):
+        # self.picture.update(self.app.pause, self.app.speed)
+        # if self.picture.mask_time == 1:
+        #     self.pic_rect = self.picture.mask.outline(every=1)
+        # else:
+        #     self.pic_rect = self.picture.mask2.outline(every=1)
         y_now = []
         y_later = []
         for coord in self.pic_rect:
@@ -281,27 +290,31 @@ class Player(pygame.sprite.Sprite):
                 self.rect = self.rect.move(0, -2)
             elif max(y_now) >= (self.rect.top - 150):
                 self.rect = self.rect.move(0, 1)
+            if self.rect.top > 600:
+                self.rect = self.rect.move(0, 5)
         else:
             self.rect = self.rect.move(0, -1)
 
 
+
 class Picture:
     def __init__(self):
-        self.image = pygame.image.load('data/map1_v1.png')
+        self.image = pygame.image.load('data/hills2.png')
         self.rect = self.image.get_rect()
-        self.rect.left = 0
+        self.rect.left = 1
         self.rect.top = 300
         self.mask = pygame.mask.from_surface(self.image)
 
-        self.image2 = pygame.image.load('data/map2_v1.png')
+        self.image2 = pygame.image.load('data/hills1.png')
         self.rect2 = self.image2.get_rect()
-        self.rect2.left = 700
+        self.rect2.left = 1000
         self.rect2.top = 300
-        # self.mask2 = pygame.mask.from_surface(self.image2)
+        self.mask2 = pygame.mask.from_surface(self.image2)
 
         self.first_im = True
         self.second_im = False
         self.pause = False
+        self.mask_time = 1
 
     def update(self, pause, speed):
         if not pause:
@@ -309,19 +322,30 @@ class Picture:
                 self.rect = self.rect.move(-1 * int(speed), 0)
             if self.second_im:
                 self.rect2 = self.rect2.move(-1 * int(speed), 0)
+            # if int(speed) == 0:
+            #     print(speed)
 
-            if self.rect.left == -300 and self.first_im:
+            if self.rect.left == 0 and self.first_im:
                 self.second_im = True
-                self.rect2.left = 700
+                self.rect2.left = 1000
                 self.rect2.top = 300
             if self.rect.left == -1000 and self.first_im:
                 self.first_im = False
-            if self.rect2.left == -300 and self.second_im:
-                self.rect.left = 700
+            if self.rect2.left == 0 and self.second_im:
+                self.rect.left = 1000
                 self.rect.top = 300
                 self.first_im = True
             if self.rect2.left == -1000 and self.second_im:
                 self.second_im = False
+
+            # if self.rect.left == -854:
+            #     self.mask_time = 2
+            #     print(self.mask_time)
+            #     self.mask = pygame.mask.from_surface(self.image)
+            # elif self.rect2.left == -854:
+            #     self.mask_time = 1
+            #     print(self.mask_time)
+            #     self.mask2 = pygame.mask.from_surface(self.image2)
 
 
 class Gift(pygame.sprite.Sprite):
@@ -414,6 +438,7 @@ class Weather:
 
     def update(self, pause):
         self.counter += 1
+        self.counter %= 200
         if not pause and self.counter % 3 == 0:
             if self.catch_clouds:
                 if self.rect.left > -300:
