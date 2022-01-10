@@ -1,9 +1,10 @@
-<<<<<<<< HEAD:adventure.py
 import os
 import sqlite3
 import sys
 import pygame
 import random
+# from pgu import gui
+# from PyQt5.QtWidgets import QInputDialog
 
 
 WIDTH = 1000
@@ -39,7 +40,10 @@ class App:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption('DESERT Adventure')
+        pygame.display.set_caption('Raising the Sun')
+        self.run = True
+        self.design = 'V1'
+        self.last_click = None
         self.all_sprites = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
         self.prizes = pygame.sprite.Group()
@@ -59,14 +63,13 @@ class App:
     def game(self):
         dog_surf = load_screen_im('pause.png')
         dog_rect = dog_surf.get_rect(bottomright=(60, 690))
-        picture = Picture()
+        picture = Picture(self.design)
         weather = Weather()
         gift = Gift(self)
         player = Player(self)
         self.pause = False
-        run = True
 
-        while run:
+        while self.run:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.terminate()
@@ -78,12 +81,12 @@ class App:
                             self.pause = True
                             dog_surf = load_screen_im('play.png')
                             dog_rect = dog_surf.get_rect(bottomright=(60, 690))
-                            rect = pygame.Rect(0, 60, 700, 640)
-                            sub = self.screen.subsurface(rect)
-                            pygame.image.save(sub, 'data/screenshot.jpg')
-                            pause_screen = load_screen_im('screenshot.jpg')
-                            pause_rect = pause_screen.get_rect(topleft=(0, 60))
-                            self.screen.blit(pause_screen, pause_rect)
+                            # rect = pygame.Rect(0, 60, 700, 640)
+                            # sub = self.screen.subsurface(rect)
+                            # pygame.image.save(sub, 'data/screenshot.jpg')
+                            # pause_screen = load_screen_im('screenshot.jpg')
+                            # pause_rect = pause_screen.get_rect(topleft=(0, 60))
+                            # self.screen.blit(pause_screen, pause_rect)
                             pygame.mixer.music.pause()
 
                         else:
@@ -91,6 +94,8 @@ class App:
                             dog_surf = load_screen_im('pause.png')
                             dog_rect = dog_surf.get_rect(bottomright=(60, 690))
                             pygame.mixer.music.unpause()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    player.jump(picture)
 
             self.screen.fill('#99CCFF')
             self.all_sprites.draw(self.screen)
@@ -105,7 +110,7 @@ class App:
 
                 self.fps += 0.5
 
-                self.all_sprites.update()
+                self.all_sprites.update(self, player)
                 self.player_group.update(picture)
                 gift.update(player, picture)
 
@@ -189,7 +194,8 @@ class App:
         intro_text = ["ЗАСТАВКА", "",
                       "Правила игры",
                       "Начало игры",
-                      "Достижения"]
+                      "Достижения",
+                      "Выбрать дизайн"]
 
         fon = pygame.transform.scale(load_screen_im('fon.jpg'), (WIDTH, HEIGHT))
         self.screen.blit(fon, (0, 0))
@@ -214,17 +220,51 @@ class App:
                     x, y = event.pos
                     if (x in range(10, 120)) and (y in range(60, 75)):
                         print('Заставка')
+                        self.last_click = 'Заставка'
                     if (x in range(10, 147)) and (y in range(120, 135)):
                         print('Правила')
+                        self.last_click = 'Правила'
                     if (x in range(10, 150)) and (y in range(150, 165)):
                         self.game()
-                    if (x in range(10, 180)) and (y in range(180, 195)):
+                    if (x in range(10, 145)) and (y in range(180, 195)):
                         print('Достижения')
+                        self.last_click = 'Достижения'
+                    if (x in range(10, 180)) and (y in range(210, 225)):
+                        self.last_click = 'Дизайн'
+                        text_coord = 230
+                        choice = ['о Пиксельный', 'о Классика']
+                        for line in choice:
+                            string_rendered = font.render(line, True, pygame.Color('white'))
+                            intro_rect = string_rendered.get_rect()
+                            text_coord += 10
+                            intro_rect.top = text_coord
+                            intro_rect.x = 30
+                            text_coord += intro_rect.height
+                            self.screen.blit(string_rendered, intro_rect)
+                        print('Дизайн')
+                    if (x in range(30, 175)) and (y in range(240, 255)) and self.last_click == 'Дизайн':
+                        self.design = 'V2'
+                        self.last_click = ''
+                        self.start_game()
+                    if (x in range(30, 160)) and (y in range(270, 285)) and self.last_click == 'Дизайн':
+                        self.design = 'V1'
+                        self.last_click = ''
+                        self.start_game()
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                     self.game()
 
             pygame.display.flip()
             self.clock.tick(int(self.fps))
+
+#    def choose_design(self):
+#        design, ok_pressed = QInputDialog.getItem(
+#            self, "Выберите дизайн игры", "Готовы выбрать?",
+#            ("Простой дизайн", "Красивый дизайн"), 1, False)
+#        if ok_pressed:
+#            if design == "Простой дизайн":
+#                self.design = 'V2'
+#            elif design == "Красивый дизайн":
+#                self.design = 'V1'
 
     def update_records(self):
         con = sqlite3.connect('info.sqlite')
@@ -252,8 +292,11 @@ class App:
             con.commit()
             con.close()
 
-    def finish_game(self):
-        pass
+    def finish_game(self, score, length, money):
+        print('THE END')
+        self.run = False
+        fon = pygame.transform.scale(load_screen_im('fon.jpg'), (WIDTH, HEIGHT))
+        self.screen.blit(fon, (0, 0))
 
 
 class Player(pygame.sprite.Sprite):
@@ -262,14 +305,18 @@ class Player(pygame.sprite.Sprite):
         self.image = load_screen_im("doll.png", -1)
         self.app = app
         self.app.screen.fill('#99CCFF')
-        self.picture = Picture()
+        self.picture = Picture(app.design)
         self.pic_rect = self.picture.mask.outline(every=1)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = 100
         self.rect.y = 250
 
-    def update(self,  picture):
+    def jump(self, picture):
+        if pygame.sprite.collide_mask(self, picture):
+            self.rect = self.rect.move(0, -50)
+
+    def update(self, picture):
         # self.picture.update(self.app.pause, self.app.speed)
         # if self.picture.mask_time == 1:
         #     self.pic_rect = self.picture.mask.outline(every=1)
@@ -278,18 +325,18 @@ class Player(pygame.sprite.Sprite):
         y_now = []
         y_later = []
         for coord in self.pic_rect:
-            if coord[0] == 205:
+            if coord[0] == 137:
                 y_now.append(coord[1])
-            if coord[0] == 206:
+            if coord[0] == 138:
                 y_later.append(coord[1])
 
         distance = abs(max(y_later) - max(y_now))
         # вместо +-1 нужно будет подставить +-distance, но пока что не знаю, как
 
         if not pygame.sprite.collide_mask(self, picture):
-            if max(y_now) < (self.rect.top - 150):
+            if max(y_now) < (self.rect.top - 100):
                 self.rect = self.rect.move(0, -2)
-            elif max(y_now) >= (self.rect.top - 150):
+            elif max(y_now) >= (self.rect.top - 100):
                 self.rect = self.rect.move(0, 1)
             if self.rect.top > 600:
                 self.rect = self.rect.move(0, 5)
@@ -297,19 +344,30 @@ class Player(pygame.sprite.Sprite):
             self.rect = self.rect.move(0, -1)
 
 
-
 class Picture:
-    def __init__(self):
-        self.image = pygame.image.load('data/hills2.png')
+    def __init__(self, design):
+
+        MAPS_V1 = ['data/map1_v1.png', 'data/map2_v1.png', 'data/map3_v1.png']
+        MAPS_V2 = ['data/map1_v2.png', 'data/map2_v2.png', 'data/map3_v2.png']
+        maps = None
+
+        if design == 'V1':
+            maps = MAPS_V1
+            self.x, self.y = 1000, 400
+        elif design == 'V2':
+            maps = MAPS_V2
+            self.x, self.y = 1714, 400
+
+        self.image = pygame.image.load(random.choice(maps))
         self.rect = self.image.get_rect()
         self.rect.left = 1
-        self.rect.top = 300
+        self.rect.top = 700 - self.y
         self.mask = pygame.mask.from_surface(self.image)
 
-        self.image2 = pygame.image.load('data/hills1.png')
+        self.image2 = pygame.image.load(random.choice(maps))
         self.rect2 = self.image2.get_rect()
-        self.rect2.left = 1000
-        self.rect2.top = 300
+        self.rect2.left = self.x
+        self.rect2.top = 700 - self.y
         self.mask2 = pygame.mask.from_surface(self.image2)
 
         self.first_im = True
@@ -328,15 +386,15 @@ class Picture:
 
             if self.rect.left == 0 and self.first_im:
                 self.second_im = True
-                self.rect2.left = 1000
-                self.rect2.top = 300
-            if self.rect.left == -1000 and self.first_im:
+                self.rect2.left = self.x
+                self.rect2.top = 700 - self.y
+            if self.rect.left == -self.x and self.first_im:
                 self.first_im = False
             if self.rect2.left == 0 and self.second_im:
-                self.rect.left = 1000
-                self.rect.top = 300
+                self.rect.left = self.x
+                self.rect.top = 700 - self.y
                 self.first_im = True
-            if self.rect2.left == -1000 and self.second_im:
+            if self.rect2.left == -self.x and self.second_im:
                 self.second_im = False
 
             # if self.rect.left == -854:
@@ -398,18 +456,25 @@ class AnimatedSprite(pygame.sprite.Sprite):
                 self.frames.append(sheet.subsurface(pygame.Rect(
                     frame_location, self.rect.size)))
 
-    def update(self):
-        self.counter += 1
-        self.counter_of_fly += 1
-        if self.counter == 8:
-            self.counter = 0
-            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-            self.image = self.frames[self.cur_frame]
-        if self.counter_of_fly % 2 == 0:
-            self.rect = self.rect.move(-3, 0)
+    def update(self, app, player):
+        if not pygame.sprite.collide_mask(self, player):
+            self.counter += 1
+            self.counter_of_fly += 1
+            if self.counter == 8:
+                self.counter = 0
+                self.cur_frame = (self.cur_frame + 1) % len(self.frames)
+                self.image = self.frames[self.cur_frame]
+            if self.counter_of_fly % 2 == 0:
+                self.rect = self.rect.move(-3, 0)
+        else:
+            score = app.score
+            if score > 10:
+                score -= 10
+            else:
+                app.finish_game(app.score, app.length, app.money)
 
     def new_bird(self):
-        self.rect.top = 260
+        self.rect.top = 350
         self.rect.left = 700
 
 
@@ -493,396 +558,3 @@ class Weather:
 if __name__ == '__main__':
     app = App()
     app.start_game()
-========
-import os
-import sqlite3
-import sys
-import pygame
-import random
-
-
-WIDTH = 700
-HEIGHT = 700
-
-
-def load_screen_im(name, colorkey=None):
-    fullname = os.path.join('data', name)
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
-    image = pygame.image.load(fullname)
-    if colorkey is not None:
-        image = image.convert()
-        if colorkey == -1:
-            colorkey = image.get_at((0, 0))
-        image.set_colorkey(colorkey)
-    else:
-        image = image.convert_alpha()
-    return image
-
-
-def music_play(name):
-    fullname = os.path.join('data', name)
-    if not os.path.isfile(fullname):
-        print(f"Звуковой файл '{fullname}' не найден")
-        sys.exit()
-    pygame.mixer.music.load(fullname)
-    pygame.mixer.music.play(-1)
-
-
-class App:
-    def __init__(self):
-        pygame.init()
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption('DESERT Adventure')
-        self.all_sprites = pygame.sprite.Group()
-        self.player_group = pygame.sprite.Group()
-        self.bird = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 700, 260)
-        self.fps = 200.0
-        self.clock = pygame.time.Clock()
-        self.length = 0
-        self.score = 0
-        self.mus = music_play('music.mp3')
-
-    def terminate(self):
-        pygame.quit()
-        sys.exit()
-
-    def game(self):
-        dog_surf = load_screen_im('pause.png')
-        dog_rect = dog_surf.get_rect(bottomright=(60, 690))
-        picture = Picture()
-        weather = Weather()
-        pause = False
-        run = True
-
-        while run:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.terminate()
-                if event.type == pygame.MOUSEBUTTONUP:
-                    x, y = event.pos
-                    if (x in range(10, 60)) and (y in range(640, 690)):
-                        print('Пауза')
-                        if not pause:
-                            pause = True
-                            dog_surf = load_screen_im('play.png', -1)
-                            rect = pygame.Rect(0, 60, 700, 640)
-                            sub = self.screen.subsurface(rect)
-                            pygame.image.save(sub, 'data/screenshot.jpg')
-                            pause_screen = load_screen_im('screenshot.jpg')
-                            pause_rect = pause_screen.get_rect(topleft=(0, 60))
-                            self.screen.blit(pause_screen, pause_rect)
-                            pygame.mixer.music.pause()
-
-                        else:
-                            pause = False
-                            dog_surf = load_screen_im('pause.png', -1)
-                            pygame.mixer.music.unpause()
-
-            Player(self)
-            self.screen.fill('#99CCFF')
-            self.all_sprites.draw(self.screen)
-            self.player_group.draw(self.screen)
-
-            if not pause:
-                self.length += 0.06
-
-                self.fps += 0.5
-
-                self.all_sprites.update()
-                self.player_group.update(picture)
-
-                font = pygame.font.Font(None, 50)
-                string_rendered = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
-                intro_rect = string_rendered.get_rect()
-                intro_rect.top = 10
-                intro_rect.x = 675 - 24 * len(str(int(self.length)))
-                self.screen.blit(string_rendered, intro_rect)
-
-            else:
-                font = pygame.font.Font(None, 120)
-
-                string_rendered = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
-                intro_rect = string_rendered.get_rect()
-                intro_rect.top = 250
-                intro_rect.x = (700 - 60 * len(str(int(self.length)))) // 2
-                self.screen.blit(string_rendered, intro_rect)
-
-            font = pygame.font.Font(None, 50)
-            string_rendered = font.render(str(int(self.score)), True, pygame.Color('white'))
-            intro_rect = string_rendered.get_rect()
-            intro_rect.top = 50
-            intro_rect.x = 700 - 28 * len(str(int(self.score)))
-            self.screen.blit(string_rendered, intro_rect)
-
-            self.screen.blit(picture.image, picture.rect)
-            self.screen.blit(picture.image2, picture.rect2)
-
-            if weather.clouds:
-                self.screen.blit(weather.clouds_1, weather.rect)
-                self.screen.blit(weather.clouds_2, weather.rect2)
-                self.screen.blit(weather.clouds_3, weather.rect3)
-            if weather.sun:
-                self.screen.blit(weather.sun_1, weather.rect4)
-
-            if int(self.length) % 119 == 0 and int(self.length) > 0:
-                new_weather = random.choice(['clouds', 'sun'])
-
-            if int(self.length) % 120 == 0 and int(self.length) > 2:
-                self.bird.new_bird()
-                weather.change_weather(new_weather)
-
-            picture.update(pause)
-            weather.update(pause)
-            self.screen.blit(dog_surf, dog_rect)
-            pygame.display.flip()
-            self.clock.tick(int(self.fps))
-
-    def start_game(self):
-        intro_text = ["ЗАСТАВКА", "",
-                      "Правила игры",
-                      "Начало игры",
-                      "Достижения"]
-
-        fon = pygame.transform.scale(load_screen_im('fon.jpg'), (WIDTH, HEIGHT))
-        self.screen.blit(fon, (0, 0))
-        font = pygame.font.Font(None, 30)
-
-        text_coord = 50
-        for line in intro_text:
-            string_rendered = font.render(line, True, pygame.Color('white'))
-            intro_rect = string_rendered.get_rect()
-            text_coord += 10
-            intro_rect.top = text_coord
-            intro_rect.x = 10
-            text_coord += intro_rect.height
-            self.screen.blit(string_rendered, intro_rect)
-
-        run = True
-        while run:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.terminate()
-                if event.type == pygame.MOUSEBUTTONUP:
-                    x, y = event.pos
-                    if (x in range(10, 120)) and (y in range(60, 75)):
-                        print('Заставка')
-                    if (x in range(10, 147)) and (y in range(120, 135)):
-                        print('Правила')
-                    if (x in range(10, 150)) and (y in range(150, 165)):
-                        self.game()
-                    if (x in range(10, 180)) and (y in range(180, 195)):
-                        print('Достижения')
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                    self.game()
-
-            pygame.display.flip()
-            self.clock.tick(int(self.fps))
-
-    def update_records(self):
-        con = sqlite3.connect('info.sqlite')
-        cur = con.cursor()
-        length = cur.execute(f"""SELECT num from records
-                                    WHERE type = 'length'""").fetchall()
-        score = cur.execute(f"""SELECT num from records
-                                    WHERE type = 'score'""").fetchall()
-        con.close()
-
-        if self.length > length[0]:
-            con = sqlite3.connect('info.sqlite')
-            cur = con.cursor()
-            data = ('length', int(self.length))
-            query = 'INSERT INTO records VALUES (?, ?)'
-            cur.execute(query, data)
-            con.commit()
-            con.close()
-        if self.score > score[0]:
-            con = sqlite3.connect('info.sqlite')
-            cur = con.cursor()
-            data = ('score', int(self.score))
-            query = 'INSERT INTO records VALUES (?, ?)'
-            cur.execute(query, data)
-            con.commit()
-            con.close()
-
-    def finish_game(self):
-        pass
-
-
-class Player(pygame.sprite.Sprite):
-    def __init__(self, app):
-        super().__init__(app.player_group)
-        self.image = load_screen_im("doll.png", -1)
-        app.screen.fill('#99CCFF')
-        self.rect = self.image.get_rect()
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = 100
-        self.rect.y = 250
-        self.n = 0
-
-    def update(self, picture):
-        if not pygame.sprite.collide_mask(self, picture):
-            self.n -= 1
-            if self.n < 0:
-                self.rect = self.rect.move(0, 1)
-            elif self.n >= 0:
-                self.rect = self.rect.move(0, -1)
-        else:
-            self.n += 1
-
-
-class Picture:
-    def __init__(self):
-        self.image = pygame.image.load('data/test.png')
-        self.rect = self.image.get_rect()
-        self.rect.left = 0
-        self.rect.top = 400
-        self.mask = pygame.mask.from_surface(self.image)
-
-        self.image2 = pygame.image.load('data/test3.png')
-        self.rect2 = self.image2.get_rect()
-        self.rect2.left = 700
-        self.rect2.top = 400
-        # self.mask2 = pygame.mask.from_surface(self.image2)
-
-        self.first_im = True
-        self.second_im = False
-        self.pause = False
-
-    def update(self, pause):
-        if not pause:
-            if self.first_im:
-                self.rect = self.rect.move(-1, 0)
-            if self.second_im:
-                self.rect2 = self.rect2.move(-1, 0)
-
-            if self.rect.left == -300 and self.first_im:
-                self.second_im = True
-                self.rect2.left = 700
-                self.rect2.top = 400
-            if self.rect.left == -1000 and self.first_im:
-                self.first_im = False
-            if self.rect2.left == -300 and self.second_im:
-                self.rect.left = 700
-                self.rect.top = 400
-                self.first_im = True
-            if self.rect2.left == -1000 and self.second_im:
-                self.second_im = False
-
-
-class AnimatedSprite(pygame.sprite.Sprite):
-    def __init__(self, app, sheet, columns, rows, x, y):
-        super().__init__(app.all_sprites)
-        self.frames = []
-        self.cut_sheet(sheet, columns, rows)
-        self.cur_frame = 0
-        self.image = self.frames[self.cur_frame]
-        self.rect = self.rect.move(x, y)
-        self.counter = 0
-        self.counter_of_fly = 0
-
-    def cut_sheet(self, sheet, columns, rows):
-        self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
-                                sheet.get_height() // rows)
-        for j in range(rows):
-            for i in range(columns):
-                frame_location = (self.rect.w * i, self.rect.h * j)
-                self.frames.append(sheet.subsurface(pygame.Rect(
-                    frame_location, self.rect.size)))
-
-    def update(self):
-        self.counter += 1
-        self.counter_of_fly += 1
-        if self.counter == 8:
-            self.counter = 0
-            self.cur_frame = (self.cur_frame + 1) % len(self.frames)
-            self.image = self.frames[self.cur_frame]
-        if self.counter_of_fly % 2 == 0:
-            self.rect = self.rect.move(-3, 0)
-
-    def new_bird(self):
-        self.rect.top = 260
-        self.rect.left = 700
-
-
-class Weather:
-    def __init__(self):
-        self.clouds_1 = load_screen_im('cloud.png')
-        self.clouds_2 = load_screen_im('cloud2.png')
-        self.clouds_3 = load_screen_im('cloud3.png')
-        self.rect = self.clouds_1.get_rect()
-        self.rect.left, self.rect.top = 400, 0
-        self.rect2 = self.clouds_1.get_rect()
-        self.rect2.left, self.rect2.top = 700, -50
-        self.rect3 = self.clouds_1.get_rect()
-        self.rect3.left, self.rect3.top = 300, 50
-
-        self.sun_1 = load_screen_im('sun.png')
-        self.rect4 = self.sun_1.get_rect()
-        self.rect4.left, self.rect4.top = 600, 100
-
-        self.weather = 'sun'
-        self.clouds = False
-        self.sun = True
-        self.catch_clouds = False
-        self.catch_sun = False
-
-        self.counter = 0
-
-    def update(self, pause):
-        self.counter += 1
-        if not pause and self.counter % 3 == 0:
-            if self.catch_clouds:
-                if self.rect.left > -300:
-                    self.rect = self.rect.move(-3, 0)
-                if self.rect2.left > -300:
-                    self.rect2 = self.rect2.move(-4, 0)
-                if self.rect3.left > -300:
-                    self.rect3 = self.rect3.move(-5, 0)
-                if self.rect.left <= -300 and self.rect2.left <= -300 and self.rect3.left <= -300:
-                    self.catch_clouds = False
-                    self.clouds = False
-
-            if self.catch_sun:
-                if self.rect4.left > -300:
-                    self.rect4 = self.rect4.move(-2, 0)
-                if self.rect4.left <= -300:
-                    self.catch_sun = False
-                    self.sun = False
-
-            if self.clouds and not self.catch_clouds:
-                self.rect = self.rect.move(-2, 0)
-                if self.rect.left <= -300:
-                    self.rect.left = 700
-                self.rect2 = self.rect2.move(-3, 0)
-                if self.rect2.left <= -300:
-                    self.rect2.left = 700
-                self.rect3 = self.rect3.move(-4, 0)
-                if self.rect3.left <= -300:
-                    self.rect3.left = 700
-            elif self.sun and not self.catch_sun:
-                self.rect4 = self.rect4.move(-1, 0)
-                if self.rect4.left <= -300:
-                    self.rect4.left = 600
-
-    def change_weather(self, weather):
-        if self.weather != weather:
-            if weather == 'sun':
-                self.weather = 'sun'
-                self.rect4.left, self.rect.top = 700, 0
-                self.sun = True
-                self.catch_clouds = True
-            else:
-                self.weather = 'clouds'
-                self.rect.left, self.rect.top = 700, 0
-                self.rect2.left, self.rect2.top = 850, -50
-                self.rect3.left, self.rect3.top = 900, 50
-                self.clouds = True
-                self.catch_sun = True
-
-
-if __name__ == '__main__':
-    app = App()
-    app.start_game()
->>>>>>>> origin/main:999.py
