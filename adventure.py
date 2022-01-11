@@ -3,6 +3,7 @@ import sqlite3
 import sys
 import pygame
 import random
+
 # from pgu import gui
 # from PyQt5.QtWidgets import QInputDialog
 
@@ -47,14 +48,15 @@ class App:
         self.all_sprites = pygame.sprite.Group()
         self.player_group = pygame.sprite.Group()
         self.prizes = pygame.sprite.Group()
-        self.bird = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 700, 260)
+        self.bird = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 1000, 260)
         self.fps = 200.0
         self.clock = pygame.time.Clock()
         self.length = 0
         self.score = 0
         self.money = 0
-        self.speed = 1
-        self.mus = music_play('music.mp3')
+        self.speed_variants = [1, 2, 4, 5, 8, 10]
+        self.speed = self.speed_variants[0]
+        # self.mus = music_play('music.mp3')
 
     def terminate(self):
         pygame.quit()
@@ -66,6 +68,7 @@ class App:
         picture = Picture(self.design)
         weather = Weather()
         gift = Gift(self)
+        stone = Stones(self)
         player = Player(self)
         self.pause = False
 
@@ -105,14 +108,20 @@ class App:
             if not self.pause:
                 self.length += 0.06
 
-                if int(self.length) % 20 == 0 and int(self.length) > 0:
-                    self.speed += 0.005
+                # пока что раз в 10 метров, но потом можешь изменить на сотку, например
+                if int(self.length) % 1000 == 0 and int(self.length) > 0:
+                    self.length += 1
+                    i = self.speed_variants.index(self.speed)
+                    if i < 5:
+                        self.speed = self.speed_variants[i + 1]
+                        print(self.speed)
 
                 self.fps += 0.5
 
                 self.all_sprites.update(self, player)
                 self.player_group.update(picture)
                 gift.update(player, picture)
+                stone.update(self, player, picture)
 
                 font = pygame.font.Font(None, 50)
                 length = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
@@ -163,17 +172,26 @@ class App:
             if int(self.length) % 130 == 0 and int(self.length) > 0:
                 gift.new_gift()
 
+            if int(self.length) % 72 == 0 and int(self.length) > 0:
+                print('new stone spawned')
+                stone.new_stone()
+
             if gift.prize == 'ускорение':
-                self.speed += 2
+                i = self.speed_variants.index(self.speed)
+                if i < 5:
+                    self.speed = self.speed_variants[i + 1]
                 print(self.speed)
 
             if gift.prize == 'замедление':
-                if self.speed > 3:
-                    self.speed -= 2
-                elif 2 < self.speed <= 3:
-                    self.speed -= 1
-                else:
-                    self.speed -= 0.01
+                i = self.speed_variants.index(self.speed)
+                if i > 0:
+                    self.speed = self.speed_variants[i - 1]
+                # if self.speed > 3:
+                #     self.speed -= 2
+                # elif 2 < self.speed <= 3:
+                #     self.speed -= 1
+                # else:
+                #     self.speed -= 0.01
 
             if gift.prize == 'щит':
                 print('Пока не реализовано')
@@ -256,15 +274,15 @@ class App:
             pygame.display.flip()
             self.clock.tick(int(self.fps))
 
-#    def choose_design(self):
-#        design, ok_pressed = QInputDialog.getItem(
-#            self, "Выберите дизайн игры", "Готовы выбрать?",
-#            ("Простой дизайн", "Красивый дизайн"), 1, False)
-#        if ok_pressed:
-#            if design == "Простой дизайн":
-#                self.design = 'V2'
-#            elif design == "Красивый дизайн":
-#                self.design = 'V1'
+    #    def choose_design(self):
+    #        design, ok_pressed = QInputDialog.getItem(
+    #            self, "Выберите дизайн игры", "Готовы выбрать?",
+    #            ("Простой дизайн", "Красивый дизайн"), 1, False)
+    #        if ok_pressed:
+    #            if design == "Простой дизайн":
+    #                self.design = 'V2'
+    #            elif design == "Красивый дизайн":
+    #                self.design = 'V1'
 
     def update_records(self):
         con = sqlite3.connect('info.sqlite')
@@ -292,8 +310,9 @@ class App:
             con.commit()
             con.close()
 
-    def finish_game(self, score, length, money):
+    def finish_game(self):
         print('THE END')
+        score, length, money = self.score, self.length, self.money
         self.run = False
         fon = pygame.transform.scale(load_screen_im('fon.jpg'), (WIDTH, HEIGHT))
         self.screen.blit(fon, (0, 0))
@@ -313,8 +332,8 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = 250
 
     def jump(self, picture):
-        if pygame.sprite.collide_mask(self, picture):
-            self.rect = self.rect.move(0, -50)
+        # if pygame.sprite.collide_mask(self, picture):
+        self.rect = self.rect.move(0, -50)
 
     def update(self, picture):
         # self.picture.update(self.app.pause, self.app.speed)
@@ -419,7 +438,7 @@ class Gift(pygame.sprite.Sprite):
         self.prize = ''
 
     def new_gift(self):
-        self.rect.x = 700
+        self.rect.x = 1000
         self.rect.y = 0
 
     def update(self, player, picture):
@@ -434,6 +453,31 @@ class Gift(pygame.sprite.Sprite):
         else:
             self.prize = ''
             self.rect = self.rect.move(-3, 5)
+
+
+class Stones(pygame.sprite.Sprite):
+    def __init__(self, app):
+        super().__init__(app.prizes)
+        self.image = load_screen_im("stone.png", -1)
+        self.rect = self.image.get_rect()
+        self.rect.x = 800 # -200
+        self.rect.y = 400
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self, app, player, picture):
+        if pygame.sprite.collide_mask(self, player):
+            self.rect.x = -200
+            self.rect.y = 0
+            app.finish_game()
+            print('врезался в камень')
+        elif pygame.sprite.collide_mask(self, picture):
+            self.rect = self.rect.move(-1, 0)
+        else:
+            self.rect = self.rect.move(0, 1)
+
+    def new_stone(self):
+        self.rect.x = 980
+        self.rect.y = 400
 
 
 class AnimatedSprite(pygame.sprite.Sprite):
@@ -471,11 +515,11 @@ class AnimatedSprite(pygame.sprite.Sprite):
             if score > 10:
                 score -= 10
             else:
-                app.finish_game(app.score, app.length, app.money)
+                app.finish_game()  # (app.score, app.length, app.money)
 
     def new_bird(self):
         self.rect.top = 350
-        self.rect.left = 700
+        self.rect.left = 1000
 
 
 class Weather:
@@ -486,13 +530,13 @@ class Weather:
         self.rect = self.clouds_1.get_rect()
         self.rect.left, self.rect.top = 400, 0
         self.rect2 = self.clouds_1.get_rect()
-        self.rect2.left, self.rect2.top = 700, -50
+        self.rect2.left, self.rect2.top = 100, -50
         self.rect3 = self.clouds_1.get_rect()
         self.rect3.left, self.rect3.top = 300, 50
 
         self.sun_1 = load_screen_im('sun.png')
         self.rect4 = self.sun_1.get_rect()
-        self.rect4.left, self.rect4.top = 600, 100
+        self.rect4.left, self.rect4.top = 850, 100
 
         self.weather = 'sun'
         self.clouds = False
@@ -527,17 +571,17 @@ class Weather:
             if self.clouds and not self.catch_clouds:
                 self.rect = self.rect.move(-2, 0)
                 if self.rect.left <= -300:
-                    self.rect.left = 700
+                    self.rect.left = 1000
                 self.rect2 = self.rect2.move(-3, 0)
                 if self.rect2.left <= -300:
-                    self.rect2.left = 700
+                    self.rect2.left = 1000
                 self.rect3 = self.rect3.move(-4, 0)
                 if self.rect3.left <= -300:
-                    self.rect3.left = 700
+                    self.rect3.left = 1000
             elif self.sun and not self.catch_sun:
                 self.rect4 = self.rect4.move(-1, 0)
                 if self.rect4.left <= -300:
-                    self.rect4.left = 600
+                    self.rect4.left = 850
 
     def change_weather(self, weather):
         if self.weather != weather:
