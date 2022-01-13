@@ -395,9 +395,9 @@ class Player(pygame.sprite.Sprite):
         # вместо +-1 нужно будет подставить +-distance, но пока что не знаю, как
 
         if not pygame.sprite.collide_mask(self, picture):
-            if max(y_now) < (self.rect.top - 100):
+            if max(y_now) < (self.rect.top - 200):
                 self.rect = self.rect.move(0, -2)
-            elif max(y_now) >= (self.rect.top - 200):
+            elif max(y_now) >= (self.rect.top - 300):
                 self.rect = self.rect.move(0, 1)
             if self.rect.top > 600:
                 self.rect = self.rect.move(0, 5)
