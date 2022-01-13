@@ -380,7 +380,10 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = 250
 
     def jump(self, picture):
-        self.rect = self.rect.move(0, -50)
+        d = 1
+        for i in range(7):
+            d += 1
+            self.rect = self.rect.move(1 * d, -2 * d)
 
     def update(self, picture):
         y_now = []
@@ -402,7 +405,10 @@ class Player(pygame.sprite.Sprite):
             if self.rect.top > 600:
                 self.rect = self.rect.move(0, 5)
         else:
-            self.rect = self.rect.move(0, -1)
+            if self.rect.x == 100:
+                self.rect = self.rect.move(0, -1)
+            else:
+                self.rect = self.rect.move(-1, -1)
 
 
 class Picture:
