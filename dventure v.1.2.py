@@ -51,7 +51,7 @@ class App:
         self.player_group = pygame.sprite.Group()
         self.prizes = pygame.sprite.Group()
         self.bird = AnimatedSprite(self, load_screen_im("birds5.png"), 8, 3, 1000, 260)
-        self.fps = 200.0
+        self.fps = 100.0
         self.clock = pygame.time.Clock()
         self.length = 0
         self.score = 0
@@ -77,6 +77,8 @@ class App:
         player = Player(self)
         coins = Money(self)
         self.pause = False
+        is_jump = False
+        jump_count = 10
 
         while self.run:
             for event in pygame.event.get():
@@ -107,9 +109,21 @@ class App:
                             dog_rect = dog_surf.get_rect(bottomright=(60, 690))
                             pygame.mixer.music.unpause()
 
-
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                    player.jump(picture)
+                    is_jump = True
+                    # player.jump(picture)
+
+            if is_jump:
+                if player.jump(picture):
+                    if jump_count >= 10:
+                        if jump_count < 0:
+                            player.rect.y += jump_count ** 2
+                        else:
+                            player.rect.y -= jump_count ** 2
+                        jump_count -= 1
+                    else:
+                        is_jump = False
+                        jump_count = 10
 
             self.screen.fill('#99CCFF')
             self.all_sprites.draw(self.screen)
@@ -130,7 +144,8 @@ class App:
                 self.fps += 0.5
 
                 self.all_sprites.update(self, player)
-                self.player_group.update(picture)
+                if not is_jump:
+                    self.player_group.update(picture)
                 gift.update(player, picture)
                 stone.update(self, player, picture)
                 coins.update(self, player, picture)
@@ -164,8 +179,9 @@ class App:
             intro_rect.x = 15
             self.screen.blit(money, intro_rect)
 
-            self.screen.blit(picture.image, picture.rect)
-            self.screen.blit(picture.image2, picture.rect2)
+            # self.screen.blit(picture.image, picture.rect)
+            # self.screen.blit(picture.image2, picture.rect2)
+            picture.draw_picture(self.screen)
 
             if weather.sun:
                 self.screen.blit(weather.sun_1, weather.rect4)
@@ -381,7 +397,17 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = 250
 
     def jump(self, picture):
-        self.rect = self.rect.move(0, -50)
+        if pygame.sprite.collide_mask(self, picture):
+            return True
+        else:
+            return False
+            # jump_count = 10
+            # if jump_count >= 10:
+            #     if jump_count < 0:
+            #         self.rect.y += jump_count ** 2
+            #     else:
+            #         self.rect.y -= jump_count ** 2
+            #     jump_count -= 1
 
     def update(self, picture):
         y_now = []
@@ -393,11 +419,10 @@ class Player(pygame.sprite.Sprite):
                 y_later.append(coord[1])
 
         distance = max(y_later) - max(y_now)
-        # вместо +-1 нужно будет подставить +-distance, но пока что не знаю, как
 
         if not pygame.sprite.collide_mask(self, picture):
-            if max(y_now) < (self.rect.top - 100):
-                self.rect = self.rect.move(0, -2)
+            if max(y_now) < (self.rect.top - 200):
+                self.rect = self.rect.move(0, -1 * distance)
             elif max(y_now) >= (self.rect.top - 200):
                 self.rect = self.rect.move(0, 1)
             if self.rect.top > 600:
@@ -469,16 +494,14 @@ class Picture:
                 self.rect = self.rect.move(-1 * int(speed), 0)
                 self.rect1 = self.rect1.move(-1 * int(speed), 0)
 
-
-            if self.rect.left == -1000 and self.first_im:
+            if self.rect.left == -999 and self.first_im:
                 self.first_im = False
                 self.second_im = True
                 self.choice_image(True)
-            if self.rect.left == -1000 and self.second_im:
+            if self.rect.left == -999 and self.second_im:
                 self.second_im = False
                 self.first_im = True
                 self.choice_image(False)
-
 
 
 class Gift(pygame.sprite.Sprite):
@@ -591,7 +614,7 @@ class Weather:
 
         self.sun_1 = load_screen_im('sun.png')
         self.rect4 = self.sun_1.get_rect()
-        self.rect4.left, self.rect4.top = 850, 100
+        self.rect4.left, self.rect4.top = 1100, 100
 
         self.weather = 'sun'
         self.clouds = False
@@ -636,20 +659,20 @@ class Weather:
             elif self.sun and not self.catch_sun:
                 self.rect4 = self.rect4.move(-1, 0)
                 if self.rect4.left <= -300:
-                    self.rect4.left = 850
+                    self.rect4.left = 1100
 
     def change_weather(self, weather):
         if self.weather != weather:
             if weather == 'sun':
                 self.weather = 'sun'
-                self.rect4.left, self.rect.top = 700, 0
+                self.rect4.left, self.rect.top = 1000, 0
                 self.sun = True
                 self.catch_clouds = True
             else:
                 self.weather = 'clouds'
-                self.rect.left, self.rect.top = 700, 0
-                self.rect2.left, self.rect2.top = 850, -50
-                self.rect3.left, self.rect3.top = 900, 50
+                self.rect.left, self.rect.top = 1000, 0
+                self.rect2.left, self.rect2.top = 1100, -50
+                self.rect3.left, self.rect3.top = 1170, 50
                 self.clouds = True
                 self.catch_sun = True
 
@@ -659,7 +682,7 @@ class Money(pygame.sprite.Sprite):
         super().__init__(app.prizes)
         self.image = load_screen_im("coin.png")
         self.rect = self.image.get_rect()
-        self.rect.x = 700 # -200
+        self.rect.x = 1000  # -200
         self.rect.y = 300
         self.mask = pygame.mask.from_surface(self.image)
 
@@ -668,6 +691,7 @@ class Money(pygame.sprite.Sprite):
             self.rect.x = -200
             self.rect.y = 0
             # здесь надо прибавлять монетки
+            app.money += 10
             print('+10 монеток')
         elif pygame.sprite.collide_mask(self, picture):
             self.rect = self.rect.move(-1, 0)
