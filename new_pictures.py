@@ -264,6 +264,7 @@ class App:
         money_rect.left = 70
         self.screen.blit(money, money_rect)
 
+        rul = True
         rec = True
         dis = True
         spe = True
@@ -321,6 +322,7 @@ class App:
                         if dis:
                             dis = False
                             text_coord = 230
+                            font = pygame.font.Font(None, 30)
                             choice = [' Пиксельный o', ' Классика o']
                             for line in choice:
                                 string_rendered = font.render(line, True, pygame.Color('white'))
@@ -448,6 +450,8 @@ class App:
             rect.x = coords[n][0]
             rect.y = coords[n][1]
             self.screen.blit(line, rect)
+
+        self.update_records()
 
         while self.run:
             for event in pygame.event.get():
@@ -630,6 +634,8 @@ class Stones(pygame.sprite.Sprite):
         if pygame.sprite.collide_mask(self, player):
             self.rect.x = -200
             self.rect.y = 0
+            player.kill()
+            app.bird.kill()
             app.finish_game(app.money, app.length)
             print('врезался в камень')
         elif pygame.sprite.collide_mask(self, picture):
