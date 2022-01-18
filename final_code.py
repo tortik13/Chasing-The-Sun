@@ -503,7 +503,7 @@ class App:
 
     def update_records(self):
         levels = [1, 2, 4]
-        level = levels.index(levels) + 1
+        level = levels.index(self.speed) + 1
         con = sqlite3.connect('info.sqlite')
         cur = con.cursor()
         length = cur.execute(f"""SELECT num from records
@@ -512,16 +512,26 @@ class App:
                                     WHERE type = 'score' and level = '{level}'""").fetchall()
         con.close()
 
-        if self.length > length[0]:
+        if length[0][0]:
+            if self.length > length[0][0]:
+                con = sqlite3.connect('info.sqlite')
+                cur = con.cursor()
+                cur.execute(f"""UPDATE records SET num = '{self.length}' 
+                            WHERE type = 'length' and level = '{level}'""")
+                con.commit()
+                con.close()
+            if self.score > score[0][0]:
+                con = sqlite3.connect('info.sqlite')
+                cur = con.cursor()
+                cur.execute(f"""UPDATE records SET num = '{self.score}' 
+                            WHERE type = 'score' and level = '{level}'""")
+                con.commit()
+                con.close()
+        else:
             con = sqlite3.connect('info.sqlite')
             cur = con.cursor()
             cur.execute(f"""UPDATE records SET num = '{self.length}' 
                         WHERE type = 'length' and level = '{level}'""")
-            con.commit()
-            con.close()
-        if self.score > score[0]:
-            con = sqlite3.connect('info.sqlite')
-            cur = con.cursor()
             cur.execute(f"""UPDATE records SET num = '{self.score}' 
                         WHERE type = 'score' and level = '{level}'""")
             con.commit()
