@@ -477,7 +477,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = 100
         self.rect.y = 250
         self.jump_flag = False
-        self.jump_traectory = list(map(lambda x: x * abs(x) // 140, [i for i in range(-55, 50)]))
+        self.jump_traectory = list(map(lambda x: x * abs(x) // 1400, [i for i in range(-100, 100)]))
         print(self.jump_traectory)
         self.jump_index = 0
 
