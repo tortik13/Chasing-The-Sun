@@ -5,7 +5,6 @@ import pygame
 import random
 from pygame.locals import *
 
-
 WIDTH = 1000
 HEIGHT = 700
 
@@ -60,15 +59,15 @@ def writewrap(s, font, rect, color, text, maxlines=None, wrapchar=False):
             words = sentence.split(" ")
 
         for word in words:
-            if (not wrapchar):
+            if not wrapchar:
                 word += " "
             tmp = font.render(word, 1, c)
             (iw, ih) = tmp.get_size()
-            if (x + iw > r.right):
+            if x + iw > r.right:
                 x = r.left
                 y += sh
                 row += 1
-                if (maxlines != None and row > maxlines):
+                if maxlines is not None and row > maxlines:
                     done = True
                     break
             s.blit(tmp, (x, y))
@@ -77,7 +76,7 @@ def writewrap(s, font, rect, color, text, maxlines=None, wrapchar=False):
             break
         y += sh
         row += 1
-        if (maxlines != None and row > maxlines):
+        if maxlines is not None and row > maxlines:
             break
 
 
@@ -270,6 +269,7 @@ class ShopWindow:
                         if pay:
                             pay = False
                             ErrorWindow(description[4])
+
                             # writewrap(screen, font, pygame.Rect(110, 350, 500, 100), fg, description[4])
                         else:
                             ShopWindow(money)
@@ -287,6 +287,8 @@ class ShopWindow:
 
 class App:
     def __init__(self):
+        # print(pygame.cursors.diamond)
+        # pygame.mouse.set_cursor(*pygame.cursors.broken_x)
         self.money = 0
         self.pause = False
         pygame.init()
@@ -312,6 +314,8 @@ class App:
         self.speed_variants = [1, 2, 4, 5, 8, 10]
         self.speed = self.speed_variants[0]
         # self.mus = music_play('music.mp3')
+
+        pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
     def game(self):
         dog_surf = load_screen_im('pause.png')
@@ -353,6 +357,7 @@ class App:
 
                     if (x in range(70, 120)) and (y in range(640, 690)):
                         print('Home')
+                        self.restart_everything()
                         self.start_game()
 
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
@@ -376,7 +381,7 @@ class App:
             self.player_group.draw(self.screen)
             self.all_sprites.draw(self.screen)
             self.prizes.draw(self.screen)
-            self.picture.update(self.pause, self.speed, self.stone, self.coins)
+            self.picture.update(self.pause, self.speed, self.stone, self.coins, self.gift)
             if not self.pause:
                 self.length += 0.06
 
@@ -424,15 +429,15 @@ class App:
                 self.bird.new_bird()
                 self.weather.change_weather(new_weather)
 
-            if int(self.length) % 130 == 0 and int(self.length) > 0:
-                self.gift.new_gift()
+            # if int(self.length) % 130 == 0 and int(self.length) > 0:
+            #     self.gift.new_gift()
 
-            if int(self.length) % 90 == 0 and int(self.length) > 0:
-                print('new stone spawned')
-                self.stone.new_stone()
-
-            if int(self.length) % 60 == 0 and int(self.length) > 0:
-                self.coins.new_stone()
+            # if int(self.length) % 90 == 0 and int(self.length) > 0:
+            #     print('new stone spawned')
+            #     self.stone.new_stone()
+            #
+            # if int(self.length) % 60 == 0 and int(self.length) > 0:
+            #     self.coins.new_stone()
 
             # if self.gift.prize == 'ускорение':
             #     i = self.speed_variants.index(self.speed)
@@ -610,7 +615,7 @@ class App:
                             self.last_click = ''
                             self.start_game()
                         else:
-                             ErrorWindow('Режим можно приобрести в магазине')
+                            ErrorWindow('Режим можно приобрести в магазине')
                     if (x in range(773, 890)) and (y in range(270, 290)) and not dis:
                         self.design = 'V1'
                         self.last_click = ''
@@ -741,8 +746,10 @@ class App:
                     x, y = event.pos
                     print(x, y)
                     if x in range(500, 550) and y in range(375, 425):
+                        self.restart_everything()
                         self.game()
                     if x in range(450, 500) and y in range(375, 425):
+                        self.restart_everything()
                         self.start_game()
 
             pygame.display.flip()
@@ -752,6 +759,7 @@ class App:
         self.gift.kill()
         self.stone.kill()
         self.coins.kill()
+        self.bird.new_bird()
 
 
 class Player(pygame.sprite.Sprite):
@@ -803,12 +811,12 @@ class Player(pygame.sprite.Sprite):
         else:
             self.rect = self.rect.move(0, -1)
             if self.jump_flag:
-                self.jump_flag =False
+                self.jump_flag = False
 
 
 class Picture:
     def __init__(self, design):
-        MAPS_V1 = ['data/map1_v1.png', 'data/map2_v1.png', 'data/map3_v1.png']
+        MAPS_V1 = ['data/hills1.png', 'data/hills2.png', 'data/hills3.png']
         MAPS_V2 = ['data/map1_v2.png', 'data/map2_v2.png', 'data/map3_v2.png']
         maps = None
         if design == 'V1':
@@ -837,7 +845,9 @@ class Picture:
         self.rect = self.rect1
         self.mask = pygame.mask.from_surface(self.image)
 
-    def choice_image(self, flag, stn, coin):
+        self.co = 0
+
+    def choice_image(self, flag, stn, coin, gift):
         if flag:
             self.image = self.image2
             self.rect = self.rect2
@@ -846,9 +856,14 @@ class Picture:
             self.rect1.left = self.x  # 1000
 
         else:
+            self.co += 1
+            self.co %= 5
             self.image = self.image1
             self.rect = self.rect1
-            stn.new_stone()
+            if self.co % 2 == 0:
+                coin.new_coin()
+            else:
+                gift.new_gift()
             self.mask = pygame.mask.from_surface(self.image)
             self.rect2.left = self.x  # 1000
 
@@ -860,7 +875,7 @@ class Picture:
         if self.second_im:
             screen.blit(self.image1, self.rect1)
 
-    def update(self, pause, speed, stn, coin):
+    def update(self, pause, speed, stn, coin, gift):
         x = speed * -1 + 1
         if not pause:
             if self.first_im:
@@ -874,11 +889,11 @@ class Picture:
             if self.rect.left == -self.x + x and self.first_im:
                 self.first_im = False
                 self.second_im = True
-                self.choice_image(True, stn, coin)
+                self.choice_image(True, stn, coin, gift)
             if self.rect.left == -self.x + x and self.second_im:
                 self.second_im = False
                 self.first_im = True
-                self.choice_image(False, stn, coin)
+                self.choice_image(False, stn, coin, gift)
 
 
 class Gift(pygame.sprite.Sprite):
@@ -911,29 +926,26 @@ class Gift(pygame.sprite.Sprite):
 
 
 class Stones(pygame.sprite.Sprite):
-    def __init__(self, app):
-        super().__init__(app.prizes)
+    def __init__(self, osn):
+        super().__init__(osn.prizes)
         self.image = load_screen_im("stone.png", -1)
         self.rect = self.image.get_rect()
-        self.rect.x = 800  # -200
+        self.rect.x = 1000  # -200
         self.rect.y = 400
         self.mask = pygame.mask.from_surface(self.image)
 
-    def update(self, app, player, picture):
+    def update(self, osn, player, picture):
         if pygame.sprite.collide_mask(self, player):
             self.rect.x = -200
             self.rect.y = 0
-            player.kill()
-            app.bird.kill()
-            app.finish_game()  # (app.money, app.length)
-            print('врезался в камень')
+            osn.finish_game()  # (app.money, app.length)
         elif pygame.sprite.collide_mask(self, picture):
             self.rect = self.rect.move(-1, 0)
         else:
             self.rect = self.rect.move(0, 1)
 
     def new_stone(self):
-        self.rect.x = 980
+        self.rect.x = 800
         self.rect.y = 400
 
 
@@ -1057,29 +1069,30 @@ class Weather:
 
 
 class Money(pygame.sprite.Sprite):
-    def __init__(self, app):
-        super().__init__(app.prizes)
+    def __init__(self, osn):
+        super().__init__(osn.prizes)
+        print('new_coin')
         self.image = load_screen_im("coin.png")
         self.rect = self.image.get_rect()
-        self.rect.x = 700  # -200
-        self.rect.y = 300
+        self.rect.x = 1000  # -200
+        self.rect.y = 200
         self.mask = pygame.mask.from_surface(self.image)
 
-    def update(self, app, player, picture):
+    def update(self, osn, player, picture):
         if pygame.sprite.collide_mask(self, player):
             self.rect.x = -200
-            self.rect.y = 0
+            self.rect.y = 400
             # здесь надо прибавлять монетки
             print('+10 монеток')
-            app.money += 10
+            osn.money += 10
         elif pygame.sprite.collide_mask(self, picture):
             self.rect = self.rect.move(-1, 0)
         else:
-            self.rect = self.rect.move(0, 1)
+            self.rect = self.rect.move(0, 2)
 
-    def new_stone(self):
-        self.rect.x = 500
-        self.rect.y = 450
+    def new_coin(self):
+        self.rect.x = 700
+        self.rect.y = 200
 
 
 if __name__ == '__main__':
