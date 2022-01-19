@@ -376,7 +376,7 @@ class App:
             self.player_group.draw(self.screen)
             self.all_sprites.draw(self.screen)
             self.prizes.draw(self.screen)
-            self.picture.update(self.pause, self.speed)
+            self.picture.update(self.pause, self.speed, self.stone, self.coins)
             if not self.pause:
                 self.length += 0.06
 
@@ -837,16 +837,18 @@ class Picture:
         self.rect = self.rect1
         self.mask = pygame.mask.from_surface(self.image)
 
-    def choice_image(self, flag):
+    def choice_image(self, flag, stn, coin):
         if flag:
             self.image = self.image2
             self.rect = self.rect2
+            stn.new_stone()
             self.mask = pygame.mask.from_surface(self.image)
             self.rect1.left = self.x  # 1000
 
         else:
             self.image = self.image1
             self.rect = self.rect1
+            stn.new_stone()
             self.mask = pygame.mask.from_surface(self.image)
             self.rect2.left = self.x  # 1000
 
@@ -858,7 +860,7 @@ class Picture:
         if self.second_im:
             screen.blit(self.image1, self.rect1)
 
-    def update(self, pause, speed):
+    def update(self, pause, speed, stn, coin):
         x = speed * -1 + 1
         if not pause:
             if self.first_im:
@@ -872,11 +874,11 @@ class Picture:
             if self.rect.left == -self.x + x and self.first_im:
                 self.first_im = False
                 self.second_im = True
-                self.choice_image(True)
+                self.choice_image(True, stn, coin)
             if self.rect.left == -self.x + x and self.second_im:
                 self.second_im = False
                 self.first_im = True
-                self.choice_image(False)
+                self.choice_image(False, stn, coin)
 
 
 class Gift(pygame.sprite.Sprite):
