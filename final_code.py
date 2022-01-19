@@ -86,6 +86,79 @@ def terminate():
     sys.exit()
 
 
+class ChoosePers:
+    def __init__(self, pers):
+        pygame.font.init()
+
+        screen = pygame.display.set_mode((240, 170), SWSURFACE)
+        pygame.display.set_caption('Выберите персонажа')
+        programIcon = load_screen_im('coin_start.png')
+        pygame.display.set_icon(programIcon)
+        fg = (255, 255, 255)
+        screen.fill((72, 184, 0))
+        font = pygame.font.SysFont("default", 24)
+
+        plr1 = load_screen_im('doll.png', -1)
+        plr2 = load_screen_im('doll.png', -1)
+        screen.blit(plr1, (25, 20))
+        screen.blit(plr2, (125, 20))
+
+        writewrap(screen, font, pygame.Rect(33, 130, 370, 150), fg, 'Ширли')
+        writewrap(screen, font, pygame.Rect(133, 130, 280, 40), fg, 'Бенди')
+        pygame.display.flip()
+
+        run = False
+        hero = None
+        while not run:
+            for e in pygame.event.get():
+                if e.type is QUIT:
+                    app = App()
+                    self.update_pers(hero)
+                    app.start_game()
+                if e.type == pygame.MOUSEBUTTONUP:
+                    x, y = e.pos
+                    if (x in range(25, 100)) and (y in range(20, 120)):
+                        hero = 1
+                    if (x in range(125, 200)) and (y in range(20, 120)):
+                        if pers:
+                            hero = 2
+                        else:
+                            ErrorWindow('Вы можете приобрести этого персонажа в магазине')
+            pygame.time.wait(10)
+
+    def update_pers(self, hero):
+        con = sqlite3.connect('info.sqlite')
+        cur = con.cursor()
+        cur.execute(f"""UPDATE records SET level = '{hero}' WHERE type = 'pers'""")
+        con.commit()
+        con.close()
+
+
+class ErrorWindow:
+    def __init__(self, reason):
+        pygame.font.init()
+
+        screen = pygame.display.set_mode((300, 60), SWSURFACE)
+        pygame.display.set_caption('Ошибка')
+        programIcon = load_screen_im('coin_start.png')
+        pygame.display.set_icon(programIcon)
+        fg = (255, 255, 255)
+        screen.fill((255, 138, 0))
+
+        font = pygame.font.SysFont("default", 24)
+
+        writewrap(screen, font, pygame.Rect(10, 10, 280, 40), fg, reason)
+        pygame.display.flip()
+
+        run = False
+        while not run:
+            for e in pygame.event.get():
+                if e.type is QUIT:
+                    app = App()
+                    app.start_game()
+            pygame.time.wait(10)
+
+
 class RulesWindow:
     def __init__(self):
         pygame.font.init()
@@ -121,13 +194,23 @@ class RulesWindow:
 
 
 class ShopWindow:
-    def __init__(self):
+    def __init__(self, money):
         pygame.font.init()
 
         screen = pygame.display.set_mode((685, 480), SWSURFACE)
         pygame.display.set_caption('Магазин')
         programIcon = load_screen_im('coin_start.png')
         pygame.display.set_icon(programIcon)
+
+        con = sqlite3.connect('info.sqlite')
+        cur = con.cursor()
+        pers = cur.execute(f"""SELECT num from records
+                            WHERE type = 'pers'""").fetchall()
+        pixel = cur.execute(f"""SELECT num from records
+                            WHERE type = 'pixel'""").fetchall()
+        con.close()
+
+        pers, pixel = pers[0][0], pixel[0][0]
 
         fg = (255, 255, 255)
         image = load_screen_im('finish_fon.png')
@@ -152,28 +235,54 @@ class ShopWindow:
         writewrap(screen, font, pygame.Rect(20, 440, 600, 100), fg, description[3])
         pygame.display.flip()
 
-        self.run = False
+        self.run = True
         pay = True
 
-        while not self.run:
+        while self.run:
             for event in pygame.event.get():
                 if event.type is pygame.QUIT:
+                    self.update_flags(pers, pixel)
                     app = App()
                     app.start_game()
                 if event.type == pygame.MOUSEBUTTONUP:
                     x, y = event.pos
                     if (x in range(20, 294)) and (y in range(20, 170)):
+                        if int(money) >= 100:
+                            if not pixel:
+                                money -= 100
+                                pixel = 1
+                            else:
+                                ErrorWindow('Вы уже купили этот предмет!')
+                        else:
+                            ErrorWindow('У Вас недостаточно денег!')
                         print('fon pikselniy')
                     if (x in range(20, 94)) and (y in range(190, 290)):
+                        if int(money) >= 150:
+                            if not pers:
+                                money -= 150
+                                pers = 1
+                            else:
+                                ErrorWindow('Вы уже купили этот предмет!')
+                        else:
+                            ErrorWindow('У Вас недостаточно денег!')
                         print('pers vtoroy')
                     if (x in range(6, 106)) and (y in range(300, 400)):
                         if pay:
                             pay = False
-                            writewrap(screen, font, pygame.Rect(110, 350, 500, 100), fg, description[4])
+                            ErrorWindow(description[4])
+                            # writewrap(screen, font, pygame.Rect(110, 350, 500, 100), fg, description[4])
                         else:
-                            ShopWindow()
+                            ShopWindow(money)
                         print('popolnit schet')
             pygame.time.wait(10)
+
+    def update_flags(self, pers, pixel):
+        con = sqlite3.connect('info.sqlite')
+        cur = con.cursor()
+        cur.execute(f"""UPDATE records SET num = '{pers}' WHERE type = 'pers'""")
+        cur.execute(f"""UPDATE records SET num = '{pixel}' WHERE type = 'pixel'""")
+        con.commit()
+        con.close()
 
 
 class App:
@@ -186,6 +295,7 @@ class App:
         programIcon = load_screen_im('coin_start.png')
         pygame.display.set_icon(programIcon)
         self.run = True
+        self.plr = 1
         self.design = 'V1'
         self.last_click = None
         self.all_sprites = pygame.sprite.Group()
@@ -208,13 +318,18 @@ class App:
         dog_surf2 = load_screen_im('home.png')
         dog_rect = dog_surf.get_rect(bottomright=(60, 690))
         dog_rect2 = dog_surf2.get_rect(bottomright=(120, 690))
-        picture = Picture(self.design)
-        weather = Weather()
-        gift = Gift(self)
-        stone = Stones(self)
-        player = Player(self)
-        coins = Money(self)
+        self.picture = Picture(self.design)
+        self.weather = Weather()
+        self.gift = Gift(self)
+        self.stone = Stones(self)
+        self.player = Player(self)
+        self.coins = Money(self)
         self.pause = False
+        self.color_index = 0
+        self.color_n = 0
+
+        with open('data/colors.txt', 'r', encoding='utf-8') as f_in2:
+            self.names = f_in2.readlines()
 
         while self.run:
             for event in pygame.event.get():
@@ -241,32 +356,37 @@ class App:
                         self.start_game()
 
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                    player.jump()
+                    self.player.jump()
 
-            weather.update(self.pause)
-            self.screen.fill('#99CCFF')
+            self.weather.update(self.pause)
+            self.color_n += 1
+            z = ''.join(self.names[self.color_index].split('\n'))
+            z = eval(z)
+            self.screen.fill(z)
+            self.color_index += 1
+            self.color_index %= 600
 
-            if weather.sun:
-                self.screen.blit(weather.sun_1, weather.rect4)
-            if weather.clouds:
-                self.screen.blit(weather.clouds_1, weather.rect)
-                self.screen.blit(weather.clouds_2, weather.rect2)
-                self.screen.blit(weather.clouds_3, weather.rect3)
+            if self.weather.sun:
+                self.screen.blit(self.weather.sun_1, self.weather.rect4)
+            if self.weather.clouds:
+                self.screen.blit(self.weather.clouds_1, self.weather.rect)
+                self.screen.blit(self.weather.clouds_2, self.weather.rect2)
+                self.screen.blit(self.weather.clouds_3, self.weather.rect3)
 
             self.player_group.draw(self.screen)
             self.all_sprites.draw(self.screen)
             self.prizes.draw(self.screen)
-            picture.update(self.pause, self.speed)
+            self.picture.update(self.pause, self.speed)
             if not self.pause:
                 self.length += 0.06
 
                 self.fps += 0.5
 
-                self.all_sprites.update(self, player)
-                self.player_group.update(picture)
-                gift.update(player, picture)
-                stone.update(self, player, picture)
-                coins.update(self, player, picture)
+                self.all_sprites.update(self, self.player)
+                self.player_group.update(self.picture)
+                self.gift.update(self.player, self.picture)
+                self.stone.update(self, self.player, self.picture)
+                self.coins.update(self, self.player, self.picture)
 
                 font = pygame.font.Font(None, 50)
                 length = font.render(str(int(self.length)) + 'м', True, pygame.Color('white'))
@@ -297,41 +417,41 @@ class App:
             intro_rect.x = 15
             self.screen.blit(money, intro_rect)
 
-            picture.draw_picture(self.screen)
+            self.picture.draw_picture(self.screen)
 
             if int(self.length) % 120 == 0 and int(self.length) > 2:
                 new_weather = random.choice(['clouds', 'sun'])
                 self.bird.new_bird()
-                weather.change_weather(new_weather)
+                self.weather.change_weather(new_weather)
 
             if int(self.length) % 130 == 0 and int(self.length) > 0:
-                gift.new_gift()
+                self.gift.new_gift()
 
             if int(self.length) % 90 == 0 and int(self.length) > 0:
                 print('new stone spawned')
-                stone.new_stone()
+                self.stone.new_stone()
 
             if int(self.length) % 60 == 0 and int(self.length) > 0:
-                coins.new_stone()
+                self.coins.new_stone()
 
-            if gift.prize == 'ускорение':
-                i = self.speed_variants.index(self.speed)
-                if i < 5:
-                    self.speed = self.speed_variants[i + 1]
-                print(self.speed)
+            # if self.gift.prize == 'ускорение':
+            #     i = self.speed_variants.index(self.speed)
+            #     if i < 5:
+            #         self.speed = self.speed_variants[i + 1]
+            #     print(self.speed)
+            #
+            # if self.gift.prize == 'замедление':
+            #     i = self.speed_variants.index(self.speed)
+            #     if i > 0:
+            #         self.speed = self.speed_variants[i - 1]
 
-            if gift.prize == 'замедление':
-                i = self.speed_variants.index(self.speed)
-                if i > 0:
-                    self.speed = self.speed_variants[i - 1]
-
-            if gift.prize == 'щит':
+            if self.gift.prize == 'щит':
                 print('Пока не реализовано')
 
-            if gift.prize == 'очки':
+            if self.gift.prize == 'очки':
                 self.score += random.randrange(15, 201, 5)
 
-            if gift.prize == 'монеты':
+            if self.gift.prize == 'монеты':
                 self.money += random.randrange(10, 101, 10)
 
             self.screen.blit(dog_surf, dog_rect)
@@ -369,11 +489,14 @@ class App:
         self.screen.blit(string_rendered, intro_rect)
 
         font = pygame.font.Font(None, 50)
+        text = font.render('Выбрать героя', True, pygame.Color('white'))
+        rect = text.get_rect()
+        rect.top, rect.right = 630, 890
+        self.screen.blit(text, rect)
         string_rendered = font.render('Магазин', True, pygame.Color('white'))
         intro_rect = string_rendered.get_rect()
         intro_rect.left = 20
         intro_rect.top = 630
-        print(intro_rect.height)
         self.screen.blit(string_rendered, intro_rect)
 
         coin = load_screen_im("coin_start.png")
@@ -388,7 +511,16 @@ class App:
         money_rect.left = 70
         self.screen.blit(money, money_rect)
 
-        # rul = RulesWindow
+        con = sqlite3.connect('info.sqlite')
+        cur = con.cursor()
+        pers = cur.execute(f"""SELECT num from records
+                                    WHERE type = 'pers'""").fetchall()
+        pixel = cur.execute(f"""SELECT num from records
+                                    WHERE type = 'pixel'""").fetchall()
+        con.close()
+
+        pers, pixel = pers[0][0], pixel[0][0]
+
         rec = True
         dis = True
         spe = True
@@ -401,7 +533,10 @@ class App:
                     x, y = event.pos
                     if (x in range(20, 162)) and (y in range(630, 664)):
                         print('shop')
-                        ShopWindow()
+                        ShopWindow(self.all_money)
+                    if (x in range(637, 890)) and (y in range(630, 665)):
+                        print('change pers')
+                        ChoosePers(pers)
                     if (x in range(781, 890)) and (y in range(60, 80)):
                         print('Заставка')
                         self.last_click = 'Заставка'
@@ -410,6 +545,12 @@ class App:
                         RulesWindow()
                         self.last_click = 'Правила'
                     if (x in range(763, 890)) and (y in range(150, 170)):
+                        con = sqlite3.connect('info.sqlite')
+                        cur = con.cursor()
+                        self.plr = cur.execute(f"""SELECT level from records
+                                                        WHERE type = 'pers'""").fetchall()
+                        con.close()
+                        self.plr = self.plr[0][0]
                         self.game()
                     if (x in range(765, 890)) and (y in range(180, 200)):
                         print('Достижения')
@@ -464,9 +605,12 @@ class App:
                             self.start_game()
                         print('Дизайн')
                     if (x in range(744, 890)) and (y in range(240, 260)) and not dis:
-                        self.design = 'V2'
-                        self.last_click = ''
-                        self.start_game()
+                        if pixel:
+                            self.design = 'V2'
+                            self.last_click = ''
+                            self.start_game()
+                        else:
+                             ErrorWindow('Режим можно приобрести в магазине')
                     if (x in range(773, 890)) and (y in range(270, 290)) and not dis:
                         self.design = 'V1'
                         self.last_click = ''
@@ -554,6 +698,8 @@ class App:
         return length[0], score[0], money[0]
 
     def finish_game(self):
+        self.restart_everything()
+
         mon = self.money
         leng = self.score
         self.run = True
@@ -601,11 +747,18 @@ class App:
 
             pygame.display.flip()
 
+    def restart_everything(self):
+        self.player.kill()
+        self.gift.kill()
+        self.stone.kill()
+        self.coins.kill()
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, app):
         super().__init__(app.player_group)
-        self.image = load_screen_im("doll.png", -1)
+        images = [load_screen_im("doll.png", -1), load_screen_im("doll.png", -1)]
+        self.image = images[app.plr - 1]
         self.app = app
         self.app.screen.fill('#99CCFF')
         self.picture = Picture(app.design)
