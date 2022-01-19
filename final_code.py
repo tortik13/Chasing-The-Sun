@@ -97,8 +97,8 @@ class ChoosePers:
         screen.fill((72, 184, 0))
         font = pygame.font.SysFont("default", 24)
 
-        plr1 = load_screen_im('doll.png', -1)
-        plr2 = load_screen_im('doll.png', -1)
+        plr1 = load_screen_im('doll1.png')
+        plr2 = load_screen_im('doll2.png')
         screen.blit(plr1, (25, 20))
         screen.blit(plr2, (125, 20))
 
@@ -128,7 +128,8 @@ class ChoosePers:
     def update_pers(self, hero):
         con = sqlite3.connect('info.sqlite')
         cur = con.cursor()
-        cur.execute(f"""UPDATE records SET level = '{hero}' WHERE type = 'pers'""")
+        if hero:
+            cur.execute(f"""UPDATE records SET level = '{hero}' WHERE type = 'pers'""")
         con.commit()
         con.close()
 
@@ -215,7 +216,7 @@ class ShopWindow:
         image = load_screen_im('finish_fon.png')
         screen.blit(image, (0, 0))
         fon2 = load_screen_im('fon_v2.png')
-        doll2 = load_screen_im('doll.png', -1)
+        doll2 = load_screen_im('doll2.png')
         coins = load_screen_im('coin.png')
 
         screen.blit(fon2, (20, 20))
@@ -313,7 +314,7 @@ class App:
         self.speed = 1
         self.speed_variants = [1, 2, 4, 5, 8, 10]
         self.speed = self.speed_variants[0]
-        # self.mus = music_play('music.mp3')
+        self.mus = music_play('music1.mp3')
 
         pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
@@ -428,27 +429,6 @@ class App:
                 new_weather = random.choice(['clouds', 'sun'])
                 self.bird.new_bird()
                 self.weather.change_weather(new_weather)
-
-            # if int(self.length) % 130 == 0 and int(self.length) > 0:
-            #     self.gift.new_gift()
-
-            # if int(self.length) % 90 == 0 and int(self.length) > 0:
-            #     print('new stone spawned')
-            #     self.stone.new_stone()
-            #
-            # if int(self.length) % 60 == 0 and int(self.length) > 0:
-            #     self.coins.new_stone()
-
-            # if self.gift.prize == 'ускорение':
-            #     i = self.speed_variants.index(self.speed)
-            #     if i < 5:
-            #         self.speed = self.speed_variants[i + 1]
-            #     print(self.speed)
-            #
-            # if self.gift.prize == 'замедление':
-            #     i = self.speed_variants.index(self.speed)
-            #     if i > 0:
-            #         self.speed = self.speed_variants[i - 1]
 
             if self.gift.prize == 'щит':
                 print('Пока не реализовано')
@@ -571,7 +551,7 @@ class App:
                             level = 1
                             for line in records:
                                 if line[0]:
-                                    text = f'На уровне {level} Вы прошли {line[0]} метров и набрали {line[1]} очков'
+                                    text = f'На уровне {level} Вы прошли {int(line[0])} метров и набрали {line[1]} очков'
                                     level += 1
                                     string_rendered = font.render(text, True, pygame.Color('white'))
                                     record_rect = string_rendered.get_rect()
@@ -706,7 +686,7 @@ class App:
         self.restart_everything()
 
         mon = self.money
-        leng = self.score
+        leng = self.length
         self.run = True
         fon = pygame.transform.scale(load_screen_im('fon.jpg'), (WIDTH, HEIGHT))
         self.screen.blit(fon, (0, 0))
@@ -765,7 +745,7 @@ class App:
 class Player(pygame.sprite.Sprite):
     def __init__(self, app):
         super().__init__(app.player_group)
-        images = [load_screen_im("doll.png", -1), load_screen_im("doll.png", -1)]
+        images = [load_screen_im("doll1.png"), load_screen_im("doll2.png")]
         self.image = images[app.plr - 1]
         self.app = app
         self.app.screen.fill('#99CCFF')
