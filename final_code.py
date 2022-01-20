@@ -143,7 +143,7 @@ class ErrorWindow:
         programIcon = load_screen_im('coin_start.png')
         pygame.display.set_icon(programIcon)
         fg = (255, 255, 255)
-        screen.fill((255, 138, 0))
+        screen.fill((0, 138, 236))
 
         font = pygame.font.SysFont("default", 24)
 
@@ -167,6 +167,7 @@ class RulesWindow:
         pygame.display.set_caption('Правила')
         programIcon = load_screen_im('coin_start.png')
         pygame.display.set_icon(programIcon)
+        pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
         fg = (255, 255, 255)
         image = load_screen_im('finish_fon.png')
@@ -201,6 +202,7 @@ class ShopWindow:
         pygame.display.set_caption('Магазин')
         programIcon = load_screen_im('coin_start.png')
         pygame.display.set_icon(programIcon)
+        pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
         con = sqlite3.connect('info.sqlite')
         cur = con.cursor()
@@ -343,7 +345,6 @@ class App:
                 if event.type == pygame.MOUSEBUTTONUP:
                     x, y = event.pos
                     if (x in range(10, 60)) and (y in range(640, 690)):
-                        print('Пауза')
                         if not self.pause:
                             self.pause = True
                             dog_surf = load_screen_im('play.png')
@@ -357,7 +358,6 @@ class App:
                             pygame.mixer.music.unpause()
 
                     if (x in range(70, 120)) and (y in range(640, 690)):
-                        print('Home')
                         self.restart_everything()
                         self.start_game()
 
@@ -366,11 +366,12 @@ class App:
 
             self.weather.update(self.pause)
             self.color_n += 1
-            z = ''.join(self.names[self.color_index].split('\n'))
-            z = eval(z)
-            self.screen.fill(z)
-            self.color_index += 1
-            self.color_index %= 600
+            if self.color_n % 3:
+                z = ''.join(self.names[self.color_index].split('\n'))
+                z = eval(z)
+                self.screen.fill(z)
+                self.color_index += 1
+                self.color_index %= 600
 
             if self.weather.sun:
                 self.screen.blit(self.weather.sun_1, self.weather.rect4)
@@ -757,7 +758,6 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = 250
         self.jump_flag = False
         self.jump_traectory = list(map(lambda x: x * abs(x) // 1400, [i for i in range(-100, 100)]))
-        print(self.jump_traectory)
         self.jump_index = 0
 
     def jump(self):
