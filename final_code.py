@@ -252,22 +252,24 @@ class ShopWindow:
                         if int(money) >= 100:
                             if not pixel:
                                 money -= 100
+                                self.money = money
+                                self.update_money()
                                 pixel = 1
                             else:
                                 ErrorWindow('Вы уже купили этот предмет!')
                         else:
                             ErrorWindow('У Вас недостаточно денег!')
-                        print('fon pikselniy')
                     if (x in range(20, 94)) and (y in range(190, 290)):
                         if int(money) >= 150:
                             if not pers:
                                 money -= 150
+                                self.money = money
+                                self.update_money()
                                 pers = 1
                             else:
                                 ErrorWindow('Вы уже купили этот предмет!')
                         else:
                             ErrorWindow('У Вас недостаточно денег!')
-                        print('pers vtoroy')
                     if (x in range(6, 106)) and (y in range(300, 400)):
                         if pay:
                             pay = False
@@ -278,6 +280,13 @@ class ShopWindow:
                             ShopWindow(money)
                         print('popolnit schet')
             pygame.time.wait(10)
+
+    def update_money(self):
+        con = sqlite3.connect('info.sqlite')
+        cur = con.cursor()
+        cur.execute(f"""UPDATE records SET num = '{self.money}' WHERE type = 'money'""")
+        con.commit()
+        con.close()
 
     def update_flags(self, pers, pixel):
         con = sqlite3.connect('info.sqlite')
@@ -828,24 +837,26 @@ class Picture:
         self.co = 0
 
     def choice_image(self, flag, stn, coin, gift):
+        self.co += 1
+        self.co %= 5
         if flag:
             self.image = self.image2
             self.rect = self.rect2
-            stn.new_stone()
             self.mask = pygame.mask.from_surface(self.image)
             self.rect1.left = self.x  # 1000
 
         else:
-            self.co += 1
-            self.co %= 5
             self.image = self.image1
             self.rect = self.rect1
-            if self.co % 2 == 0:
-                coin.new_coin()
-            else:
-                gift.new_gift()
             self.mask = pygame.mask.from_surface(self.image)
             self.rect2.left = self.x  # 1000
+
+        if self.co % 6 == 0:
+            gift.new_gift()
+        elif self.co % 2 == 0:
+            coin.new_coin()
+        else:
+            stn.new_stone()
 
     def draw_picture(self, screen):
         screen.blit(self.image, self.rect)
